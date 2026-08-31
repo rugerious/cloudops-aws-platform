@@ -1,0 +1,871 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudOps — Incident Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #080a0f;
+    --bg2:    #0d1117;
+    --surface:#141c26;
+    --border: #1e2d40;
+    --ink:    #e8e4dc;
+    --muted:  #4a6070;
+    --amber:  #f5a623;
+    --amber2: #ffbf4a;
+    --blue:   #3b9eff;
+    --rust:   #e84a20;
+    --green:  #2dce7a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,10,15,0.92);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px;
+    letter-spacing: 0.05em;
+  }
+
+  .nav-logo .amber { color: var(--amber); }
+
+  .nav-right { display: flex; align-items: center; gap: 20px; }
+
+  .nav-user {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .nav-user .role {
+    color: var(--blue);
+    border: 1px solid var(--blue);
+    padding: 2px 8px;
+    margin-left: 8px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .btn-logout {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-logout:hover { border-color: var(--rust); color: var(--rust); }
+
+  /* ── LAYOUT ── */
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 36px 40px 80px; }
+
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 38px;
+    letter-spacing: 0.02em;
+  }
+
+  .subtitle {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .btn-new {
+    background: var(--amber);
+    border: 1px solid var(--amber);
+    color: #000;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 11px 22px;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  .btn-new:hover { background: var(--amber2); }
+
+  /* ── STAT STRIP ── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border: 1px solid var(--border);
+    margin-bottom: 32px;
+  }
+
+  .stat-cell {
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+  }
+
+  .stat-cell:last-child { border-right: none; }
+
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 32px;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── INCIDENT LIST ── */
+  .list-head {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--blue);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .list-head::before { content: '//'; color: var(--muted); }
+
+  #incidentList { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+
+  .incident-row {
+    background: var(--bg2);
+    padding: 18px 22px;
+    display: grid;
+    grid-template-columns: 90px 1fr 140px 120px 160px;
+    align-items: center;
+    gap: 16px;
+    transition: background 0.15s;
+  }
+
+  .incident-row:hover { background: var(--surface); }
+
+  .sev {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.05em;
+    padding: 3px 8px;
+    border: 1px solid currentColor;
+    width: fit-content;
+  }
+
+  .sev-P1 { color: var(--rust); }
+  .sev-P2 { color: var(--amber); }
+  .sev-P3 { color: var(--blue); }
+  .sev-P4 { color: var(--muted); }
+
+  .inc-main .inc-title {
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+
+  .inc-main .inc-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .status-badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    width: fit-content;
+    border: 1px solid currentColor;
+  }
+
+  .status-OPEN { color: var(--rust); }
+  .status-IN_PROGRESS { color: var(--amber); }
+  .status-CLOSED { color: var(--green); }
+
+  .inc-date {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .inc-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+  .mini-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    padding: 6px 10px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .mini-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .mini-btn.close-btn:hover { border-color: var(--green); color: var(--green); }
+  .mini-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    background: var(--bg2);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  /* ── MODAL (new incident) ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop.show { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 480px;
+    padding: 32px;
+    position: relative;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--rust), var(--amber), var(--blue));
+  }
+
+  .modal h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px;
+    letter-spacing: 0.02em;
+    margin-bottom: 22px;
+  }
+
+  .field { margin-bottom: 16px; }
+
+  .field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 10px 12px;
+    outline: none;
+  }
+
+  .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+  .field textarea { resize: vertical; min-height: 70px; font-family: 'DM Sans', sans-serif; }
+
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+  .btn-primary, .btn-secondary {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 11px 20px;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .btn-primary { background: var(--amber); border: 1px solid var(--amber); color: #000; font-weight: 500; }
+  .btn-primary:hover { background: var(--amber2); }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .btn-secondary { background: none; border: 1px solid var(--border); color: var(--muted); }
+  .btn-secondary:hover { border-color: var(--ink); color: var(--ink); }
+
+  .modal-status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    display: none;
+    border-left: 2px solid var(--rust);
+    color: var(--rust);
+    background: rgba(232,74,32,0.06);
+  }
+
+  .modal-status.show { display: block; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--bg2);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 12px 18px;
+    z-index: 200;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.25s;
+  }
+
+  .toast.show { opacity: 1; transform: translateY(0); }
+
+  /* ── ATTACHMENTS ── */
+  .attach-row {
+    padding: 14px 22px;
+    background: var(--bg2);
+    border-top: 1px dashed var(--border);
+    display: none;
+  }
+
+  .attach-row.show { display: block; }
+
+  .attach-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+
+  .attach-chip {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--blue);
+    border: 1px solid var(--border);
+    padding: 5px 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .attach-chip::before { content: '📎'; font-size: 10px; }
+
+  .attach-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .attach-controls input[type="file"] {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    max-width: 220px;
+  }
+
+  .attach-upload-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--blue);
+    color: var(--blue);
+    padding: 7px 14px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .attach-upload-btn:hover { background: rgba(59,158,255,0.08); }
+  .attach-upload-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .attach-status {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  .attach-status.err { color: var(--rust); }
+  .attach-status.ok { color: var(--green); }
+
+  @media(max-width:760px){
+    .incident-row { grid-template-columns: 1fr; gap: 8px; }
+    .inc-actions { justify-content: flex-start; }
+    .wrap { padding: 24px 20px 60px; }
+    nav { padding: 14px 20px; }
+    .stat-strip { grid-template-columns: 1fr 1fr; }
+    .stat-cell:nth-child(2) { border-right: none; }
+    .stat-cell:nth-child(3) { border-top: 1px solid var(--border); }
+    .stat-cell:nth-child(4) { border-top: 1px solid var(--border); border-right: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">CLOUD<span class="amber">OPS</span></div>
+  <div class="nav-right">
+    <div class="nav-user" id="navUser">—</div>
+    <button class="btn-logout" id="logoutBtn">Sign out</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <div>
+      <h1>Incident Console</h1>
+      <div class="subtitle" id="subtitle">// loading incidents…</div>
+    </div>
+    <button class="btn-new" id="newIncidentBtn">+ New Incident</button>
+  </div>
+
+  <div class="stat-strip">
+    <div class="stat-cell">
+      <div class="stat-num" id="statTotal">—</div>
+      <div class="stat-label">Total</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num" style="color:var(--rust)" id="statOpen">—</div>
+      <div class="stat-label">Open</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num" style="color:var(--amber)" id="statProgress">—</div>
+      <div class="stat-label">In Progress</div>
+    </div>
+    <div class="stat-cell">
+      <div class="stat-num" style="color:var(--green)" id="statClosed">—</div>
+      <div class="stat-label">Closed</div>
+    </div>
+  </div>
+
+  <div class="list-head">All Incidents</div>
+  <div id="incidentList"></div>
+</div>
+
+<!-- NEW INCIDENT MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h2>New Incident</h2>
+    <form id="newIncidentForm">
+      <div class="field">
+        <label for="f-title">Title</label>
+        <input type="text" id="f-title" required placeholder="e.g. Core switch unreachable">
+      </div>
+      <div class="field">
+        <label for="f-description">Description</label>
+        <textarea id="f-description" required placeholder="What's happening?"></textarea>
+      </div>
+      <div class="field">
+        <label for="f-severity">Severity</label>
+        <select id="f-severity" required>
+          <option value="">Select severity</option>
+          <option value="P1">P1 — Critical</option>
+          <option value="P2">P2 — High</option>
+          <option value="P3">P3 — Medium</option>
+          <option value="P4">P4 — Low</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="f-location">Location</label>
+        <input type="text" id="f-location" required placeholder="e.g. Manchester-DC01">
+      </div>
+      <div class="field">
+        <label for="f-device">Device</label>
+        <input type="text" id="f-device" required placeholder="e.g. SW-CORE-01">
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitIncidentBtn">Create Incident</button>
+      </div>
+      <div class="modal-status" id="modalStatus"></div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  // ── Configuration ──
+  const API_BASE = "https://k4nxp5am94.execute-api.eu-west-2.amazonaws.com";
+
+  const idToken = sessionStorage.getItem("cloudops_id_token");
+
+  if (!idToken) {
+    window.location.href = "login.html";
+  }
+
+  function decodeToken(token) {
+    try {
+      const payload = token.split(".")[1];
+      return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function getUserGroups(claims) {
+    const raw = claims["cognito:groups"];
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return raw.replace(/[\[\]]/g, "").split(",").map(g => g.trim()).filter(Boolean);
+  }
+
+  const claims = decodeToken(idToken);
+  const userGroups = getUserGroups(claims);
+  const canClose = userGroups.includes("Managers") || userGroups.includes("Admins");
+
+  document.getElementById("navUser").innerHTML =
+    (claims.email || "unknown") + `<span class="role">${userGroups[0] || "no role"}</span>`;
+
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    sessionStorage.clear();
+    window.location.href = "login.html";
+  });
+
+  async function apiRequest(path, options = {}) {
+    const response = await fetch(API_BASE + path, {
+      ...options,
+      headers: {
+        "Authorization": "Bearer " + idToken,
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    });
+
+    if (response.status === 401) {
+      sessionStorage.clear();
+      window.location.href = "login.html";
+      return null;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { status: response.status, data };
+  }
+
+  function showToast(message) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 2600);
+  }
+
+  function formatDate(iso) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
+      " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  let openAttachPanels = new Set();
+
+  function renderIncidents(incidents) {
+    const list = document.getElementById("incidentList");
+    const subtitle = document.getElementById("subtitle");
+
+    const total = incidents.length;
+    const open = incidents.filter(i => i.status === "OPEN").length;
+    const inProgress = incidents.filter(i => i.status === "IN_PROGRESS").length;
+    const closed = incidents.filter(i => i.status === "CLOSED").length;
+
+    document.getElementById("statTotal").textContent = total;
+    document.getElementById("statOpen").textContent = open;
+    document.getElementById("statProgress").textContent = inProgress;
+    document.getElementById("statClosed").textContent = closed;
+
+    subtitle.textContent = `// ${total} incident${total === 1 ? "" : "s"} tracked`;
+
+    if (total === 0) {
+      list.innerHTML = `<div class="empty-state">No incidents yet. Create one to get started.</div>`;
+      return;
+    }
+
+    const sorted = [...incidents].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+    list.innerHTML = sorted.map(inc => {
+      const attachments = inc.attachments || [];
+      return `
+      <div>
+        <div class="incident-row" data-id="${inc.incidentId}">
+          <div class="sev sev-${inc.severity}">${inc.severity}</div>
+          <div class="inc-main">
+            <div class="inc-title">${escapeHtml(inc.title)}</div>
+            <div class="inc-meta">${escapeHtml(inc.location)} · ${escapeHtml(inc.device)}</div>
+          </div>
+          <div class="status-badge status-${inc.status}">${inc.status.replace("_", " ")}</div>
+          <div class="inc-date">${formatDate(inc.createdAt)}</div>
+          <div class="inc-actions">
+            ${inc.status !== "CLOSED" && inc.status !== "IN_PROGRESS" ? `<button class="mini-btn progress-btn" data-id="${inc.incidentId}">Start</button>` : ""}
+            <button class="mini-btn attach-toggle-btn" data-id="${inc.incidentId}">${attachments.length ? `Files (${attachments.length})` : "Attach"}</button>
+            ${inc.status !== "CLOSED" ? `<button class="mini-btn close-btn" data-id="${inc.incidentId}" ${canClose ? "" : "disabled title='Managers/Admins only'"}>Close</button>` : ""}
+          </div>
+        </div>
+        <div class="attach-row" id="attach-row-${inc.incidentId}">
+          <div class="attach-list" id="attach-list-${inc.incidentId}">
+            ${attachments.map(a => `<div class="attach-chip">${escapeHtml(a.fileName)}</div>`).join("")}
+          </div>
+          <div class="attach-controls">
+            <input type="file" id="attach-file-${inc.incidentId}" accept="image/jpeg,image/png,application/pdf,text/plain">
+            <button class="attach-upload-btn" data-id="${inc.incidentId}">Upload</button>
+            <span class="attach-status" id="attach-status-${inc.incidentId}"></span>
+          </div>
+        </div>
+      </div>
+    `;
+    }).join("");
+
+    document.querySelectorAll(".progress-btn").forEach(btn => {
+      btn.addEventListener("click", () => markInProgress(btn.dataset.id));
+    });
+
+    document.querySelectorAll(".close-btn").forEach(btn => {
+      btn.addEventListener("click", () => closeIncident(btn.dataset.id));
+    });
+
+    document.querySelectorAll(".attach-toggle-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const row = document.getElementById(`attach-row-${btn.dataset.id}`);
+        row.classList.toggle("show");
+        if (row.classList.contains("show")) {
+          openAttachPanels.add(btn.dataset.id);
+        } else {
+          openAttachPanels.delete(btn.dataset.id);
+        }
+      });
+    });
+
+    // Re-open any panels that were open before this re-render
+    openAttachPanels.forEach(id => {
+      const row = document.getElementById(`attach-row-${id}`);
+      if (row) row.classList.add("show");
+    });
+
+    document.querySelectorAll(".attach-upload-btn").forEach(btn => {
+      btn.addEventListener("click", () => uploadAttachment(btn.dataset.id));
+    });
+  }
+
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  async function loadIncidents() {
+    const result = await apiRequest("/incidents");
+    if (!result) return;
+
+    if (result.status !== 200) {
+      showToast("Failed to load incidents");
+      return;
+    }
+
+    renderIncidents(result.data.incidents || []);
+  }
+
+  async function markInProgress(id) {
+    const result = await apiRequest(`/incidents/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "IN_PROGRESS" })
+    });
+
+    if (!result) return;
+
+    if (result.status === 200) {
+      showToast("Incident marked in progress");
+      loadIncidents();
+    } else {
+      showToast(result.data.message || "Update failed");
+    }
+  }
+
+  async function closeIncident(id) {
+    const result = await apiRequest(`/incidents/${id}/close`, { method: "POST" });
+
+    if (!result) return;
+
+    if (result.status === 200) {
+      showToast("Incident closed");
+      loadIncidents();
+    } else {
+      showToast(result.data.message || "Close failed");
+    }
+  }
+
+  async function uploadAttachment(incidentId) {
+    const fileInput = document.getElementById(`attach-file-${incidentId}`);
+    const statusEl = document.getElementById(`attach-status-${incidentId}`);
+    const file = fileInput.files[0];
+
+    if (!file) {
+      statusEl.textContent = "Choose a file first";
+      statusEl.className = "attach-status err";
+      return;
+    }
+
+    statusEl.textContent = "Requesting upload URL…";
+    statusEl.className = "attach-status";
+
+    try {
+      // Step 1: ask our API for a presigned URL
+      const urlResult = await apiRequest(`/incidents/${incidentId}/attachments`, {
+        method: "POST",
+        body: JSON.stringify({
+          fileName: file.name,
+          contentType: file.type
+        })
+      });
+
+      if (!urlResult) return;
+
+      if (urlResult.status !== 200) {
+        statusEl.textContent = urlResult.data.message || "Could not get upload URL";
+        statusEl.className = "attach-status err";
+        return;
+      }
+
+      statusEl.textContent = "Uploading…";
+
+      // Step 2: PUT the actual file bytes straight to S3, bypassing our Lambda entirely
+      const uploadResponse = await fetch(urlResult.data.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error("S3 upload failed");
+      }
+
+      statusEl.textContent = "Uploaded";
+      statusEl.className = "attach-status ok";
+      fileInput.value = "";
+      showToast("File attached");
+      loadIncidents();
+
+    } catch (error) {
+      statusEl.textContent = "Upload failed";
+      statusEl.className = "attach-status err";
+    }
+  }
+
+  // ── New incident modal ──
+  const modalBackdrop = document.getElementById("modalBackdrop");
+  const newIncidentForm = document.getElementById("newIncidentForm");
+  const modalStatus = document.getElementById("modalStatus");
+  const submitIncidentBtn = document.getElementById("submitIncidentBtn");
+
+  document.getElementById("newIncidentBtn").addEventListener("click", () => {
+    modalBackdrop.classList.add("show");
+  });
+
+  document.getElementById("cancelBtn").addEventListener("click", () => {
+    modalBackdrop.classList.remove("show");
+    newIncidentForm.reset();
+    modalStatus.classList.remove("show");
+  });
+
+  newIncidentForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    submitIncidentBtn.disabled = true;
+    submitIncidentBtn.textContent = "Creating…";
+    modalStatus.classList.remove("show");
+
+    const body = {
+      title: document.getElementById("f-title").value,
+      description: document.getElementById("f-description").value,
+      severity: document.getElementById("f-severity").value,
+      location: document.getElementById("f-location").value,
+      device: document.getElementById("f-device").value
+    };
+
+    const result = await apiRequest("/incidents", {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+
+    submitIncidentBtn.disabled = false;
+    submitIncidentBtn.textContent = "Create Incident";
+
+    if (!result) return;
+
+    if (result.status === 201) {
+      modalBackdrop.classList.remove("show");
+      newIncidentForm.reset();
+      showToast("Incident created");
+      loadIncidents();
+    } else {
+      modalStatus.textContent = result.data.message || "Failed to create incident";
+      modalStatus.classList.add("show");
+    }
+  });
+
+  loadIncidents();
+</script>
+
+</body>
+</html>

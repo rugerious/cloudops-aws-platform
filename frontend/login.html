@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudOps — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #080a0f;
+    --bg2:    #0d1117;
+    --surface:#141c26;
+    --border: #1e2d40;
+    --ink:    #e8e4dc;
+    --muted:  #4a6070;
+    --amber:  #f5a623;
+    --amber2: #ffbf4a;
+    --blue:   #3b9eff;
+    --blue2:  #5bb8ff;
+    --rust:   #e84a20;
+    --green:  #2dce7a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 48px 48px;
+    opacity: 0.25;
+    pointer-events: none;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.03) 2px, rgba(0,0,0,0.03) 4px);
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .glow {
+    position: fixed;
+    width: 600px;
+    height: 600px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(59,158,255,0.08) 0%, transparent 70%);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+  }
+
+  .panel {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 420px;
+    padding: 0 24px;
+  }
+
+  .brand {
+    text-align: center;
+    margin-bottom: 40px;
+  }
+
+  .brand-mark {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+
+  .brand-mark::before, .brand-mark::after {
+    content: '';
+    display: block;
+    width: 24px;
+    height: 1px;
+    background: var(--blue);
+  }
+
+  h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 48px;
+    letter-spacing: 0.03em;
+    line-height: 1;
+  }
+
+  h1 .amber { color: var(--amber); }
+
+  .brand-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 10px;
+    letter-spacing: 0.05em;
+  }
+
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    padding: 36px 32px;
+    position: relative;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--rust), var(--amber), var(--blue));
+  }
+
+  .field { margin-bottom: 20px; }
+
+  .field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .field input {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .field input:focus {
+    border-color: var(--blue);
+  }
+
+  .field input::placeholder { color: #2a3a4a; }
+
+  .submit {
+    width: 100%;
+    background: var(--amber);
+    border: 1px solid var(--amber);
+    color: #000;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 13px 0;
+    cursor: pointer;
+    transition: background 0.2s, border-color 0.2s;
+    margin-top: 8px;
+  }
+
+  .submit:hover { background: var(--amber2); border-color: var(--amber2); }
+  .submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .status {
+    margin-top: 18px;
+    padding: 12px 14px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    border-left: 2px solid var(--border);
+    display: none;
+  }
+
+  .status.show { display: block; }
+  .status.err { border-color: var(--rust); color: var(--rust); background: rgba(232,74,32,0.06); }
+  .status.ok { border-color: var(--green); color: var(--green); background: rgba(45,206,122,0.06); }
+  .status.info { border-color: var(--blue); color: var(--blue); background: rgba(59,158,255,0.06); }
+
+  .foot {
+    text-align: center;
+    margin-top: 24px;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--border);
+    letter-spacing: 0.08em;
+  }
+
+  /* new-password challenge, hidden by default */
+  #newPasswordField { display: none; }
+  #newPasswordField.show { display: block; }
+</style>
+</head>
+<body>
+
+<div class="glow"></div>
+
+<div class="panel">
+  <div class="brand">
+    <div class="brand-mark">Signal to Cloud</div>
+    <h1>CLOUD<span class="amber">OPS</span></h1>
+    <div class="brand-sub">// incident operations console</div>
+  </div>
+
+  <div class="card">
+    <form id="loginForm">
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" placeholder="you@cloudops-test.com" required autocomplete="username">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input type="password" id="password" placeholder="••••••••••••" required autocomplete="current-password">
+      </div>
+      <div class="field" id="newPasswordField">
+        <label for="newPassword">New Password (first sign-in)</label>
+        <input type="password" id="newPassword" placeholder="Set a permanent password" autocomplete="new-password">
+      </div>
+      <button type="submit" class="submit" id="submitBtn">Sign in</button>
+    </form>
+    <div class="status" id="status"></div>
+  </div>
+
+  <div class="foot">CLOUDOPS-DEV · EU-WEST-2</div>
+</div>
+
+<script>
+  // ── Cognito configuration ──
+  const COGNITO_REGION = "eu-west-2";
+  const COGNITO_CLIENT_ID = "5g88v6td017pakqp4nmgt9nudr";
+  const COGNITO_ENDPOINT = `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
+
+  const form = document.getElementById("loginForm");
+  const statusEl = document.getElementById("status");
+  const submitBtn = document.getElementById("submitBtn");
+  const newPasswordField = document.getElementById("newPasswordField");
+
+  let pendingSession = null;
+  let pendingUsername = null;
+
+  function showStatus(message, type) {
+    statusEl.textContent = message;
+    statusEl.className = "status show " + type;
+  }
+
+  function setLoading(isLoading) {
+    submitBtn.disabled = isLoading;
+    submitBtn.textContent = isLoading ? "Connecting…" : "Sign in";
+  }
+
+  async function cognitoRequest(target, body) {
+    const response = await fetch(COGNITO_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-amz-json-1.1",
+        "X-Amz-Target": `AWSCognitoIdentityProviderService.${target}`
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || "Sign-in failed");
+    }
+
+    return data;
+  }
+
+  function storeSession(authResult) {
+    sessionStorage.setItem("cloudops_id_token", authResult.IdToken);
+    sessionStorage.setItem("cloudops_access_token", authResult.AccessToken);
+    sessionStorage.setItem("cloudops_refresh_token", authResult.RefreshToken);
+  }
+
+  form.addEventListener("submit", async (event) => {
+    event.preventDefault();
+
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const newPassword = document.getElementById("newPassword").value;
+
+    setLoading(true);
+
+    try {
+      // Step 2 of the challenge flow: user already submitted a new password
+      if (pendingSession) {
+        const result = await cognitoRequest("RespondToAuthChallenge", {
+          ChallengeName: "NEW_PASSWORD_REQUIRED",
+          ClientId: COGNITO_CLIENT_ID,
+          Session: pendingSession,
+          ChallengeResponses: {
+            USERNAME: pendingUsername,
+            NEW_PASSWORD: newPassword
+          }
+        });
+
+        storeSession(result.AuthenticationResult);
+        showStatus("Signed in. Redirecting…", "ok");
+        setTimeout(() => { window.location.href = "dashboard.html"; }, 700);
+        return;
+      }
+
+      // Step 1: normal sign-in attempt
+      const result = await cognitoRequest("InitiateAuth", {
+        AuthFlow: "USER_PASSWORD_AUTH",
+        ClientId: COGNITO_CLIENT_ID,
+        AuthParameters: {
+          USERNAME: email,
+          PASSWORD: password
+        }
+      });
+
+      if (result.ChallengeName === "NEW_PASSWORD_REQUIRED") {
+        pendingSession = result.Session;
+        pendingUsername = email;
+        newPasswordField.classList.add("show");
+        document.getElementById("newPassword").required = true;
+        showStatus("First sign-in detected. Set a permanent password above, then sign in again.", "info");
+        setLoading(false);
+        return;
+      }
+
+      storeSession(result.AuthenticationResult);
+      showStatus("Signed in. Redirecting…", "ok");
+      setTimeout(() => { window.location.href = "dashboard.html"; }, 700);
+
+    } catch (error) {
+      showStatus(error.message, "err");
+      setLoading(false);
+    }
+  });
+</script>
+
+</body>
+</html>
