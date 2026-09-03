@@ -9,6 +9,25 @@ import boto3
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TABLE_NAME"])
 
+events_client = boto3.client("events")
+EVENT_BUS_NAME = "cloudops-dev-events"
+
+
+def publish_incident_created_event(incident):
+    try:
+        events_client.put_events(
+            Entries=[
+                {
+                    "Source": "cloudops.incidents",
+                    "DetailType": "IncidentCreated",
+                    "Detail": json.dumps(incident),
+                    "EventBusName": EVENT_BUS_NAME
+                }
+            ]
+        )
+    except Exception as error:
+        print(f"WARNING: Failed to publish event: {str(error)}")
+
 
 def lambda_handler(event, context):
     try:
@@ -64,6 +83,8 @@ def lambda_handler(event, context):
         }
 
         table.put_item(Item=incident)
+
+        publish_incident_created_event(incident)
 
         return {
             "statusCode": 201,
