@@ -1,13 +1,25 @@
-# OS files
+# OS / editor files
 .DS_Store
 Thumbs.db
-
-# Editor files
 .vscode/
 .idea/
 *.swp
 
-# Environment/secrets (never commit real credentials)
+# Secrets (never commit real credentials)
 .env
 *.pem
 *.key
+
+# Terraform: working files, state and private variables never go in Git
+**/.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+*.tfplan
+# Lambda zips built by Terraform
+**/build/
+# NOTE: .terraform.lock.hcl IS committed (pins exact provider versions)

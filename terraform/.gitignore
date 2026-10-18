@@ -1,0 +1,13 @@
+# Terraform working files (downloaded providers, local caches)
+.terraform/
+# State never goes in Git: it lives in S3 and can contain IDs and secrets
+*.tfstate
+*.tfstate.*
+crash.log
+crash.*.log
+# Variable files may hold emails or secrets
+*.tfvars
+*.tfvars.json
+# Built Lambda zips
+build/
+# NOTE: .terraform.lock.hcl IS committed (pins exact provider versions)

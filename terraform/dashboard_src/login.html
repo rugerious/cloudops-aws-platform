@@ -242,13 +242,13 @@
     <div class="status" id="status"></div>
   </div>
 
-  <div class="foot">CLOUDOPS-DEV · EU-WEST-2</div>
+  <div class="foot">__ENV_LABEL__ · __REGION_LABEL__</div>
 </div>
 
 <script>
   // ── Cognito configuration ──
-  const COGNITO_REGION = "eu-west-2";
-  const COGNITO_CLIENT_ID = "5g88v6td017pakqp4nmgt9nudr";
+  const COGNITO_REGION = "__AWS_REGION__";
+  const COGNITO_CLIENT_ID = "__COGNITO_CLIENT_ID__";
   const COGNITO_ENDPOINT = `https://cognito-idp.${COGNITO_REGION}.amazonaws.com/`;
 
   const form = document.getElementById("loginForm");

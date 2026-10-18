@@ -1,119 +1,95 @@
-# CloudOps — Intelligent Field Operations & Incident Management Platform
+# CloudOps — Field Operations & Incident Management Platform
 
-**Live demo:** https://d12crl947z8m7p.cloudfront.net
-*(Note: demo uses seeded test accounts — see [Demo access](#demo-access) below)*
+**Live demo:** https://d35plopv18aik3.cloudfront.net
+*(Sign-in is by invitation: accounts are created by an administrator. See [Demo access](#demo-access).)*
 
-A cloud-based platform for logging, assigning, and tracking IT incidents from creation to resolution — built entirely hands-on on AWS.
+A serverless platform for logging, working and closing IT / data-centre incidents, built hands-on on AWS and **deployed entirely from Terraform code**.
 
 ## Why this exists
 
-In a previous role, I saw the same problem come up again and again: when something went wrong, keeping everyone informed took nearly as much effort as fixing the actual issue. The same update explained repeatedly, to different people, because there was no single place showing what was actually happening in the moment.
+In a previous role I saw the same problem again and again: when something went wrong, keeping everyone informed took nearly as much effort as fixing the issue. The same update explained repeatedly, to different people, because there was no single place showing what was happening right now.
 
-CloudOps solves that directly. The moment an incident is logged, updated, or resolved, that information is instantly visible to everyone who needs it — especially managers, who can make decisions based on live, accurate information instead of waiting for someone to explain it to them again.
+CloudOps solves that directly. The moment an incident is logged, worked or resolved, everyone who needs to know can see it, and a critical (P1) incident that nobody picks up escalates by itself.
 
-I'm building this alongside studying for the **AWS Certified Solutions Architect** certification, as a way to put the concepts into practice on a real, deployed system rather than just exam scenarios.
+I'm building it alongside studying for the **AWS Certified Solutions Architect – Associate**, to put the concepts into practice on a real, deployed system.
 
-## What it does today
+## What it does
 
-- **Full incident lifecycle** — create, view, list, update, and close incidents, each with severity (P1–P4), status (OPEN / IN_PROGRESS / CLOSED), location, and device tracking
-- **Real authentication** — Amazon Cognito user pools, JWT-based sign-in, no hardcoded credentials
-- **Role-based authorization** — only Managers/Admins can close an incident; enforced both in the UI and independently in the backend (never trust the client alone)
-- **File attachments** — attach photos, PDFs, or logs to an incident, uploaded directly to S3 via presigned URLs (the file never passes through the API layer)
-- **Event-driven P1 alerting** — every incident creation publishes an event; a filtered EventBridge rule routes P1s through SQS (with a dead-letter queue for failed processing) to trigger automatic escalation
-- **Automated critical incident escalation** — a Step Functions state machine waits 5 minutes for a P1 to be acknowledged; if it isn't, it automatically emails an escalation notice via SNS — verified end to end in both directions (acknowledged → no escalation, unacknowledged → real email sent)
-- **A real, deployed web dashboard** — hosted on Amazon S3, served through Amazon CloudFront over HTTPS, with the origin bucket kept fully private via Origin Access Control
+- **Incident lifecycle (ITIL style):** OPEN → IN PROGRESS → RESOLVED (engineer says it's fixed) → CLOSED (manager signs off), with Reopen and a full timeline of who did what.
+- **Authentication and roles:** Amazon Cognito, JWT on every API route. Field engineers work incidents, managers sign off, view-only users can look and report. Every rule is enforced in the backend, never only in the UI.
+- **Photo / file attachments** straight from a phone camera to S3 with presigned URLs (files never pass through the API).
+- **Automatic P1 escalation:** every new incident publishes an event; EventBridge picks out P1s and starts a Step Functions workflow that waits 5 minutes, checks whether anyone acknowledged it, and emails an escalation if not. No Lambda glue code.
+- **Monitoring:** CloudWatch alarms email on Lambda errors, API 5xx errors, undeliverable P1 events and failed escalations.
 
 ## Architecture
 
 ```
-Browser (CloudFront + S3, HTTPS)
-        │
-        ├── Cognito (sign-in, JWT issuance)
-        │
-        ▼
-API Gateway (HTTP API, JWT authorizer on every route)
-        │
-        ▼
-Lambda functions (Python, arm64/Graviton)
-   ├── CreateIncident      → DynamoDB PutItem + publishes IncidentCreated event
-   ├── GetIncident         → DynamoDB GetItem
-   ├── ListIncidents       → DynamoDB Scan
-   ├── UpdateIncident      → DynamoDB UpdateItem (partial updates)
-   ├── CloseIncident       → DynamoDB UpdateItem (conditional, role-gated)
-   ├── AcknowledgeIncident → DynamoDB UpdateItem (marks a P1 as seen)
-   ├── GetUploadUrl        → S3 presigned URL + DynamoDB metadata update
-   └── ProcessP1Alert      → triggered by SQS, starts the escalation workflow
-        │
-        ▼
-DynamoDB (incidents table)      S3 (attachments bucket)
+Browser ──HTTPS──▶ CloudFront (WAF, security headers) ──OAC──▶ S3 (dashboard, private)
+   │
+   ├──▶ Cognito (sign-in, JWT)
+   │
+   └──▶ API Gateway HTTP API (JWT authorizer on every route, throttling, access logs)
+            │
+            ▼
+        9 Lambda functions (Python 3.14, arm64), each with its OWN least-privilege role
+            │
+            ├──▶ DynamoDB (incidents, GSI on status, point-in-time recovery)
+            ├──▶ S3 (attachments: presigned PUT/GET, lifecycle to IA / Glacier IR)
+            └──▶ EventBridge (IncidentCreated events)
+                     │  rule: severity = P1
+                     ▼
+                 Step Functions: wait 5 min → DynamoDB GetItem → acknowledged?
+                     │                                   ├── yes → done
+                     │                                   └── no  → SNS email
+                     └── undeliverable events → SQS dead-letter queue
 
-Event pipeline (P1s only):
-CreateIncident ──▶ EventBridge (filtered: severity=P1) ──▶ SQS ──▶ ProcessP1Alert
-                                                              │
-                                                              ▼ (on repeated failure)
-                                                             DLQ
-
-Escalation workflow (Step Functions — no Lambda glue code, direct service integrations):
-ProcessP1Alert ──▶ Wait 5 min ──▶ DynamoDB: GetItem ──▶ Choice: acknowledged?
-                                                            ├── Yes → Succeed
-                                                            └── No  → SNS: Publish (email escalation)
+CloudWatch: 30-day logs everywhere + 4 alarms → SNS email
 ```
 
-Every Lambda has its own dedicated IAM role, scoped to exactly the single action it needs on exactly the single resource it needs — no shared roles, no wildcard permissions.
+## Infrastructure as code
+
+Everything above is defined in [`terraform/`](terraform/) — **111 resources**, one file per service:
+
+| File | What it builds |
+|---|---|
+| `dynamodb.tf` | Incidents table, status index, PITR, deletion protection |
+| `s3.tf` | Attachments + dashboard buckets (private, encrypted, HTTPS-only) |
+| `cognito.tf` | User pool (admin-only sign-up), app client, role groups |
+| `events.tf` | EventBridge bus + P1 rule, Step Functions workflow, SNS, DLQ |
+| `lambda.tf` | 9 functions, each with its own IAM role and log group (code in `lambda_src/`) |
+| `cloudfront.tf` | CloudFront, WAF, Origin Access Control, attachments CORS |
+| `api.tf` | HTTP API, JWT authorizer, 10 routes, one invoke permission per route |
+| `dashboard.tf` | Uploads the dashboard (`dashboard_src/`) with the live API / Cognito values filled in |
+| `monitoring.tf` | Alarms and the ops-alerts topic |
+
+State is kept in S3 with native locking. The system was first built by hand in the console, then **inventoried with a read-only script, rebuilt as code alongside the original, tested end to end, and switched over** — the console version was deleted afterwards. Rebuilding as code exposed problems the console had hidden (a shared IAM role across five functions, open self sign-up, stale permissions), all fixed in the Terraform version.
 
 ## Tech stack
 
 | Layer | Service |
 |---|---|
-| Compute | AWS Lambda (Python 3.x, arm64) |
-| API | Amazon API Gateway (HTTP API) |
+| IaC | Terraform (AWS provider 6.x), remote state in S3 |
+| Compute | AWS Lambda (Python 3.14, arm64 / Graviton) |
+| API | Amazon API Gateway (HTTP API, JWT authorizer) |
 | Database | Amazon DynamoDB |
-| Auth | Amazon Cognito (User Pools, JWT authorizers) |
-| Storage | Amazon S3 (static hosting + file attachments) |
-| CDN / Delivery | Amazon CloudFront (HTTPS, Origin Access Control, WAF) |
-| Events | Amazon EventBridge, Amazon SQS (+ dead-letter queue) |
-| Orchestration | AWS Step Functions (direct DynamoDB/SNS service integrations) |
-| Notifications | Amazon SNS |
+| Auth | Amazon Cognito |
+| Storage / CDN | Amazon S3, Amazon CloudFront, AWS WAF |
+| Events | Amazon EventBridge, AWS Step Functions, Amazon SNS, Amazon SQS |
+| Location | Amazon Location Service (geocoding) |
+| Observability | Amazon CloudWatch (logs, alarms) |
 | Frontend | Plain HTML / CSS / JavaScript (no framework, no build step) |
-| IAM | Per-function least-privilege policies |
-
-## Repository structure
-
-```
-backend/
-  lambdas/                 One folder per Lambda function
-    create-incident/
-    get-incident/
-    list-incidents/
-    update-incident/
-    close-incident/
-    acknowledge-incident/
-    get-upload-url/
-    process-p1-alert/
-  step-functions/
-    p1-escalation-workflow.asl.json   The P1 escalation state machine definition
-frontend/
-  login.html               Cognito sign-in page
-  dashboard.html            Main incident console
-docs/
-  PROGRESS.md               Full build log: every sprint, every decision, every bug fixed
-```
 
 ## Demo access
 
-The live demo uses seeded test accounts for evaluation purposes:
-- A `Managers` group account (can close incidents)
-- A no-group account (cannot close incidents — demonstrates the 403 permission boundary)
-
-*(Credentials available on request — not published here since this is a live AWS account.)*
+The live demo uses test accounts (a manager, a field engineer and a view-only user). Credentials are available on request — not published here because this is a live AWS account.
 
 ## What's next
 
-This is an active, in-progress project. Done so far: core incident API, authentication and role-based authorization, a live dashboard, file attachments, event-driven P1 alerting, and automated critical-incident escalation (Sprints 1–7).
+1. **CI/CD** with GitHub Actions (OIDC, no stored AWS keys): `terraform plan` on every pull request, `apply` on merge.
+2. **AI triage** with Amazon Bedrock: suggest severity and a summary for new incidents — AI suggests, a human confirms.
+3. **Portfolio write-up**: architecture diagram, design decisions, costs, the real bugs found and fixed, and a short demo video.
 
-Planned next: a live operations map with real-time field engineer tracking (Amazon Location Service), smart dispatch, geofencing, a full observability stack (CloudWatch, X-Ray, WAF dashboards, CloudTrail), infrastructure-as-code via Terraform, and a CI/CD pipeline via GitHub Actions.
-
-See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the complete build log — including the real bugs hit and fixed along the way (a region mismatch, a misconfigured OAuth client, a CORS/origin issue, an EventBridge JSON-parsing gotcha, and a Step Functions Choice-state edge case), which were honestly the most valuable part of building this.
+See [`docs/PROGRESS.md`](docs/PROGRESS.md) for the earlier build log (Sprints 1–7).
 
 ## Author
 

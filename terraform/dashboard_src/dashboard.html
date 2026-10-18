@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CloudOps — Incident Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:     #080a0f;
+    --bg2:    #0d1117;
+    --surface:#141c26;
+    --border: #1e2d40;
+    --ink:    #e8e4dc;
+    --ink2:   #b9b4aa;
+    --muted:  #5c7384;
+    --amber:  #f5a623;
+    --amber2: #ffbf4a;
+    --blue:   #3b9eff;
+    --rust:   #e84a20;
+    --green:  #2dce7a;
+    --panel-w: 460px;
+    --nav-h: 64px;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    min-height: 100vh;
+  }
+
+  button { font: inherit; }
+
+  /* ── NAV ── */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: var(--nav-h);
+    padding: 0 40px;
+    border-bottom: 1px solid var(--border);
+    background: rgba(8,10,15,0.92);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+
+  .nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 20px; letter-spacing: 0.05em; }
+  .nav-logo .amber { color: var(--amber); }
+  .nav-right { display: flex; align-items: center; gap: 20px; }
+  .nav-user { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  .nav-user .role {
+    color: var(--blue);
+    border: 1px solid var(--blue);
+    padding: 2px 8px;
+    margin-left: 8px;
+    font-size: 9px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .btn-logout {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    padding: 7px 14px;
+    cursor: pointer;
+  }
+
+  .btn-logout:hover { border-color: var(--rust); color: var(--rust); }
+
+  /* ── LAYOUT ── */
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 36px 40px 80px; transition: margin-right 0.2s; }
+
+  /* When the panel is open on a wide screen, the list makes room for it. */
+  body.panel-open .wrap { margin-right: calc(var(--panel-w) + 24px); }
+
+  .page-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 28px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  h1 { font-family: 'Bebas Neue', sans-serif; font-size: 38px; letter-spacing: 0.02em; }
+
+  .subtitle { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 4px; }
+
+  .btn-new {
+    background: var(--amber);
+    border: 1px solid var(--amber);
+    color: #000;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    font-weight: 500;
+    padding: 11px 22px;
+    cursor: pointer;
+  }
+
+  .btn-new:hover { background: var(--amber2); }
+
+  /* ── STAT STRIP ── */
+  /* 1px gaps on a border-coloured background draw the grid lines, whatever the layout. */
+  .stat-strip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); margin-bottom: 32px; }
+  .stat-cell { padding: 20px 24px; background: var(--bg); }
+  .stat-num { font-family: 'Bebas Neue', sans-serif; font-size: 32px; line-height: 1; }
+
+  .stat-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── TABS ── */
+  .tabs { display: flex; margin-bottom: 12px; border-bottom: 1px solid var(--border); }
+
+  .tab-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--muted);
+    padding: 10px 18px;
+    margin-bottom: -1px;
+    cursor: pointer;
+  }
+
+  .tab-btn:hover { color: var(--ink); }
+  .tab-btn.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  /* ── INCIDENT LIST ── */
+  #incidentList { display: flex; flex-direction: column; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+
+  .incident-row {
+    background: var(--bg2);
+    padding: 16px 22px;
+    display: grid;
+    grid-template-columns: 70px 1fr 120px 130px;
+    align-items: center;
+    gap: 16px;
+    cursor: pointer;
+    border: none;
+    border-left: 3px solid transparent;
+    color: inherit;
+    text-align: left;
+    width: 100%;
+  }
+
+  .incident-row:hover { background: var(--surface); }
+  .incident-row:focus-visible { outline: 2px solid var(--blue); outline-offset: -2px; }
+  .incident-row.selected { background: var(--surface); border-left-color: var(--blue); }
+
+  .sev {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border: 1px solid currentColor;
+    width: fit-content;
+  }
+
+  .sev-P1 { color: var(--rust); }
+  .sev-P2 { color: var(--amber); }
+  .sev-P3 { color: var(--blue); }
+  .sev-P4 { color: var(--muted); }
+
+  .inc-title { font-size: 14px; color: var(--ink); margin-bottom: 3px; }
+  .inc-meta { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  .badge {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 3px 8px;
+    width: fit-content;
+    border: 1px solid currentColor;
+    display: inline-block;
+  }
+
+  .status-OPEN { color: var(--rust); }
+  .status-IN_PROGRESS { color: var(--amber); }
+  .status-RESOLVED { color: var(--blue); }
+  .status-CLOSED { color: var(--green); }
+
+  .ack-badge { color: var(--green); margin-left: 8px; padding: 1px 6px; vertical-align: middle; }
+  .noack-badge { color: var(--rust); margin-left: 8px; padding: 1px 6px; vertical-align: middle; }
+
+  .inc-time { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-align: right; }
+  .inc-time.urgent { color: var(--rust); }
+
+  .empty-state {
+    padding: 60px 20px;
+    text-align: center;
+    background: var(--bg2);
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .load-more-wrap { display: flex; justify-content: center; margin-top: 16px; }
+
+  .load-more-btn, .ghost-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--ink2);
+    padding: 10px 18px;
+    cursor: pointer;
+  }
+
+  .load-more-btn:hover, .ghost-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .load-more-btn:disabled, .ghost-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── DETAIL PANEL ── */
+  /* On wide screens the panel sits below the top bar, so Sign out stays reachable. */
+  .panel {
+    position: fixed;
+    top: var(--nav-h);
+    right: 0;
+    width: var(--panel-w);
+    height: calc(100vh - var(--nav-h));
+    height: calc(100dvh - var(--nav-h));
+    background: var(--bg2);
+    border-left: 1px solid var(--border);
+    z-index: 60;
+    display: none;
+    flex-direction: column;
+  }
+
+  body.panel-open .panel { display: flex; }
+
+  .panel-head {
+    padding: 18px 22px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .panel-head-main { flex: 1; min-width: 0; }
+  .panel-badges { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+  .panel-title { font-size: 18px; font-weight: 500; line-height: 1.3; word-wrap: break-word; }
+  .panel-age { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 6px; }
+  .panel-age.urgent { color: var(--rust); }
+
+  .icon-btn {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--ink2);
+    width: 34px;
+    height: 34px;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+    flex-shrink: 0;
+  }
+
+  .icon-btn:hover { border-color: var(--ink); color: var(--ink); }
+
+  .back-btn { display: none; }
+
+  .panel-body { flex: 1; overflow-y: auto; padding: 18px 22px 24px; display: flex; flex-direction: column; gap: 22px; }
+
+  .section-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+    display: block;
+  }
+
+  .description { font-size: 14px; line-height: 1.6; color: var(--ink2); white-space: pre-wrap; word-wrap: break-word; }
+
+  .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 18px; }
+  .fact-k { font-family: 'DM Mono', monospace; font-size: 9px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+  .fact-v { font-size: 13px; margin-top: 2px; word-wrap: break-word; }
+  .mono { font-family: 'DM Mono', monospace; font-size: 11px; }
+
+  .timeline { display: flex; flex-direction: column; }
+
+  .tl-item { display: grid; grid-template-columns: 14px 1fr; gap: 10px; padding-bottom: 12px; position: relative; }
+  .tl-item:last-child { padding-bottom: 0; }
+
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: 4px;
+    top: 14px;
+    bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+
+  .tl-item:last-child::before { display: none; }
+
+  .tl-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--green); margin-top: 4px; }
+  .tl-dot.pending { background: transparent; border: 1px dashed var(--muted); }
+  .tl-dot.reopen { background: var(--amber); }
+  .tl-dot.resolve { background: var(--blue); }
+  .tl-text { font-size: 13px; }
+  .tl-text.pending { color: var(--muted); }
+  .tl-when { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  .tl-note {
+    margin-top: 6px;
+    padding: 8px 10px;
+    border-left: 2px solid var(--green);
+    background: rgba(45,206,122,0.06);
+    font-size: 13px;
+    color: var(--ink2);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  .tl-note.reopen { border-left-color: var(--amber); background: rgba(245,166,35,0.06); }
+  .tl-note.resolve { border-left-color: var(--blue); background: rgba(59,158,255,0.06); }
+
+  .locked { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); margin-top: 10px; }
+
+  .files { display: flex; flex-direction: column; gap: 6px; }
+
+  .file-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 10px;
+    border: 1px solid var(--border);
+    min-width: 0;
+  }
+
+  .file-icon { font-family: 'DM Mono', monospace; font-size: 9px; color: var(--blue); border: 1px solid var(--border); padding: 2px 5px; flex-shrink: 0; }
+  .file-name { flex: 1; min-width: 0; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .file-row a { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--blue); }
+
+  .no-files { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); }
+
+  .upload { display: flex; align-items: center; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .upload input[type="file"] { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--muted); max-width: 100%; }
+  .upload-status { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .upload-status.err { color: var(--rust); }
+  .upload-status.ok { color: var(--green); }
+
+  .panel-actions {
+    padding: 14px 22px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: var(--bg2);
+  }
+
+  .action-row { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  .act-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    padding: 11px 16px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: none;
+    color: var(--ink);
+    flex: 1;
+  }
+
+  .act-btn:hover { border-color: var(--blue); color: var(--blue); }
+  .act-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+  .act-btn.ack { border-color: var(--rust); color: var(--rust); }
+  .act-btn.ack:hover { background: rgba(232,74,32,0.08); }
+  /* Resolve = blue (engineer: "fixed"), Close = green (manager: "confirmed"), Reopen = amber ("not fixed"). */
+  .act-btn.resolve { border-color: var(--blue); color: var(--blue); }
+  .act-btn.resolve:hover { background: rgba(59,158,255,0.08); }
+  .act-btn.signoff { border-color: var(--green); color: var(--green); }
+  .act-btn.signoff:hover { background: rgba(45,206,122,0.08); }
+  .act-btn.reopen { border-color: var(--amber); color: var(--amber); }
+  .act-btn.reopen:hover { background: rgba(245,166,35,0.08); }
+  .act-btn.confirm { color: #000; font-weight: 500; }
+  .act-btn.confirm.resolve { background: var(--blue); }
+  .act-btn.confirm.signoff { background: var(--green); }
+  .act-btn.confirm.reopen { background: var(--amber); }
+
+  .action-box { display: flex; flex-direction: column; gap: 8px; }
+  .action-box p { font-size: 13px; color: var(--ink2); }
+
+  .action-box textarea, .field input, .field select, .field textarea {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--ink);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    padding: 10px 12px;
+    outline: none;
+    resize: vertical;
+  }
+
+  .action-box textarea { min-height: 80px; }
+  .action-box textarea:focus, .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--blue); }
+  .char-count { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); text-align: right; }
+
+  .hint { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+
+  /* ── NEW INCIDENT MODAL ── */
+  .modal-backdrop {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-backdrop.show { display: flex; }
+
+  .modal {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    width: 100%;
+    max-width: 480px;
+    padding: 32px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal h2 { font-family: 'Bebas Neue', sans-serif; font-size: 26px; margin-bottom: 22px; }
+  .field { margin-bottom: 16px; }
+
+  .field label {
+    display: block;
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 7px;
+  }
+
+  .field textarea { min-height: 70px; }
+  .modal-actions { display: flex; gap: 10px; margin-top: 24px; }
+
+  .btn-primary, .btn-secondary {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 11px 20px;
+    cursor: pointer;
+    flex: 1;
+  }
+
+  .btn-primary { background: var(--amber); border: 1px solid var(--amber); color: #000; font-weight: 500; }
+  .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn-secondary { background: none; border: 1px solid var(--border); color: var(--muted); }
+
+  .modal-status {
+    margin-top: 14px;
+    padding: 10px 12px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    display: none;
+    border-left: 2px solid var(--rust);
+    color: var(--rust);
+  }
+
+  .modal-status.show { display: block; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translate(-50%, 10px);
+    background: var(--bg2);
+    border: 1px solid var(--green);
+    color: var(--green);
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 12px 18px;
+    z-index: 200;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.25s;
+  }
+
+  .toast.err { border-color: var(--rust); color: var(--rust); }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ── PHONES AND NARROW SCREENS ── */
+  @media (max-width: 900px) {
+    /* The panel covers the whole screen; the list stays underneath. */
+    .panel { top: 0; width: 100%; height: 100vh; height: 100dvh; border-left: none; z-index: 70; }
+    body.panel-open .wrap { margin-right: auto; }
+    body.panel-open { overflow: hidden; }
+    .close-x { display: none; }
+    .back-btn {
+      display: block;
+      width: auto;
+      padding: 0 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .panel-head { flex-direction: column; }
+  }
+
+  @media (max-width: 760px) {
+    .wrap { padding: 24px 16px 60px; }
+    nav { padding: 0 16px; }
+    .nav-user { display: none; }
+    /* Phones: Total across the top, then the four statuses in a 2 x 2 grid. */
+    .stat-strip { grid-template-columns: 1fr 1fr; }
+    .stat-cell:first-child { grid-column: 1 / -1; }
+    .stat-cell { padding: 16px 18px; }
+    .incident-row { grid-template-columns: 52px 1fr; gap: 10px 12px; padding: 14px 16px; }
+    .incident-row .row-status { grid-column: 2; }
+    .incident-row .inc-time { grid-column: 2; text-align: left; }
+    .act-btn { padding: 14px 12px; }
+    .facts { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-logo">CLOUD<span class="amber">OPS</span></div>
+  <div class="nav-right">
+    <div class="nav-user" id="navUser">—</div>
+    <button class="btn-logout" id="logoutBtn">Sign out</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <div class="page-head">
+    <div>
+      <h1>Incident Console</h1>
+      <div class="subtitle" id="subtitle">// loading incidents…</div>
+    </div>
+    <button class="btn-new" id="newIncidentBtn">+ New Incident</button>
+  </div>
+
+  <div class="stat-strip">
+    <div class="stat-cell"><div class="stat-num" id="statTotal">—</div><div class="stat-label">Total</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:var(--rust)" id="statOpen">—</div><div class="stat-label">Open</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:var(--amber)" id="statProgress">—</div><div class="stat-label">In Progress</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:var(--blue)" id="statResolved">—</div><div class="stat-label">To verify</div></div>
+    <div class="stat-cell"><div class="stat-num" style="color:var(--green)" id="statClosed">—</div><div class="stat-label">Closed</div></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab-btn active" id="tabActive">Active</button>
+    <button class="tab-btn" id="tabResolved">To verify</button>
+    <button class="tab-btn" id="tabClosed">Closed</button>
+  </div>
+  <div id="incidentList"></div>
+  <div class="load-more-wrap" id="loadMoreWrap" style="display:none">
+    <button class="load-more-btn" id="loadMoreBtn">Load more</button>
+  </div>
+</div>
+
+<!-- DETAIL PANEL: closes only on purpose (X / Back / Esc). Clicking another row switches incident. -->
+<aside class="panel" id="panel" aria-labelledby="panelTitle">
+  <div class="panel-head">
+    <button class="icon-btn back-btn" id="backBtn" aria-label="Back to list">← Back</button>
+    <div class="panel-head-main">
+      <div class="panel-badges" id="panelBadges"></div>
+      <div class="panel-title" id="panelTitle"></div>
+      <div class="panel-age" id="panelAge"></div>
+    </div>
+    <button class="icon-btn close-x" id="closePanelBtn" aria-label="Close panel" title="Close (Esc)">×</button>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+  <div class="panel-actions" id="panelActions"></div>
+</aside>
+
+<!-- NEW INCIDENT MODAL -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <h2>New Incident</h2>
+    <form id="newIncidentForm">
+      <div class="field"><label for="f-title">Title</label><input type="text" id="f-title" required placeholder="e.g. Core switch unreachable"></div>
+      <div class="field"><label for="f-description">Description</label><textarea id="f-description" required placeholder="What's happening?"></textarea></div>
+      <div class="field">
+        <label for="f-severity">Severity</label>
+        <select id="f-severity" required>
+          <option value="">Select severity</option>
+          <option value="P1">P1 — Critical</option>
+          <option value="P2">P2 — High</option>
+          <option value="P3">P3 — Medium</option>
+          <option value="P4">P4 — Low</option>
+        </select>
+      </div>
+      <div class="field"><label for="f-location">Location</label><input type="text" id="f-location" required placeholder="e.g. Manchester-DC01"></div>
+      <div class="field"><label for="f-device">Device</label><input type="text" id="f-device" required placeholder="e.g. SW-CORE-01"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn-secondary" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn-primary" id="submitIncidentBtn">Create Incident</button>
+      </div>
+      <div class="modal-status" id="modalStatus"></div>
+    </form>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+  // ── Configuration ──
+  const API_BASE = "__API_BASE__";
+  const NOTE_MAX = 1000;
+
+  const idToken = sessionStorage.getItem("cloudops_id_token");
+  if (!idToken) {
+    window.location.href = "login.html";
+  }
+
+  function decodeToken(token) {
+    try {
+      const payload = token.split(".")[1];
+      return JSON.parse(atob(payload.replace(/-/g, "+").replace(/_/g, "/")));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function getUserGroups(claims) {
+    const raw = claims["cognito:groups"];
+    if (!raw) return [];
+    if (Array.isArray(raw)) return raw;
+    return raw.replace(/[\[\]]/g, "").split(",").map(g => g.trim()).filter(Boolean);
+  }
+
+  // ── Small helpers ──
+  function escapeHtml(str) {
+    const div = document.createElement("div");
+    div.textContent = str == null ? "" : String(str);
+    return div.innerHTML;
+  }
+
+  const claims = decodeToken(idToken || "");
+  const userGroups = getUserGroups(claims);
+  // Screen hints only: the API checks the real permissions on every request.
+  const isManager = userGroups.includes("Managers") || userGroups.includes("Admins");
+  // Engineers, managers and admins can act on incidents; anyone else logged in can only view.
+  const canOperate = isManager || userGroups.includes("FieldEngineers");
+
+  document.getElementById("navUser").innerHTML =
+    escapeHtml(claims.email || "unknown") + `<span class="role">${escapeHtml(userGroups[0] || "no role")}</span>`;
+
+  async function apiRequest(path, options = {}) {
+    const response = await fetch(API_BASE + path, {
+      ...options,
+      headers: {
+        "Authorization": "Bearer " + idToken,
+        "Content-Type": "application/json",
+        ...(options.headers || {})
+      }
+    });
+
+    if (response.status === 401) {
+      sessionStorage.clear();
+      window.location.href = "login.html";
+      return null;
+    }
+
+    const data = await response.json().catch(() => ({}));
+    return { status: response.status, data };
+  }
+
+  let toastTimer = null;
+  function showToast(message, isError) {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.classList.toggle("err", !!isError);
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
+  }
+
+  function formatDate(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return d.toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) +
+      " " + d.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  }
+
+  function timeAgo(iso) {
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 60000));
+    if (minutes < 1) return "just now";
+    if (minutes < 60) return `${minutes} min`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 48) return `${hours} h ${minutes % 60} min`;
+    return `${Math.floor(hours / 24)} days`;
+  }
+
+  // Shows "manager1" for "manager1@cloudops-test.com"
+  function shortName(who) {
+    return who ? String(who).split("@")[0] : "";
+  }
+
+  // How each status is shown on screen (the badge CSS makes it upper case).
+  const STATUS_LABELS = { OPEN: "Open", IN_PROGRESS: "In progress", RESOLVED: "Resolved", CLOSED: "Closed" };
+  function statusLabel(status) {
+    return STATUS_LABELS[status] || String(status || "");
+  }
+
+  function isActiveStatus(status) {
+    return status === "OPEN" || status === "IN_PROGRESS";
+  }
+
+  function fileKind(name) {
+    const ext = (String(name).split(".").pop() || "").toLowerCase();
+    if (["jpg", "jpeg", "png"].includes(ext)) return "IMG";
+    if (ext === "pdf") return "PDF";
+    if (ext === "txt") return "TXT";
+    return "FILE";
+  }
+
+  // ── List state ──
+  // "active":   every OPEN and IN_PROGRESS incident, loaded in one go.
+  // "resolved": the "To verify" queue: every RESOLVED incident, longest waiting first.
+  // "closed":   paginated, CLOSED_PAGE_SIZE at a time, using the API's nextToken.
+  const CLOSED_PAGE_SIZE = (() => {
+    const requested = parseInt(new URLSearchParams(window.location.search).get("pageSize"), 10);
+    return requested >= 1 && requested <= 50 ? requested : 20;
+  })();
+
+  let currentView = "active";
+  let listIncidents = [];
+  let closedNextToken = null;
+
+  // Detail panel state
+  let selectedId = null;
+  let selectedIncident = null;
+  // Which action form is open in the panel: null, "resolve", "close" or "reopen".
+  let pendingAction = null;
+
+  function renderStats(counts) {
+    if (!counts) return;
+    const resolved = counts.RESOLVED || 0;
+    document.getElementById("statTotal").textContent = counts.total;
+    document.getElementById("statOpen").textContent = counts.OPEN;
+    document.getElementById("statProgress").textContent = counts.IN_PROGRESS;
+    document.getElementById("statResolved").textContent = resolved;
+    document.getElementById("statClosed").textContent = counts.CLOSED;
+    document.getElementById("subtitle").textContent =
+      `// ${counts.total} incident${counts.total === 1 ? "" : "s"} tracked`;
+    document.getElementById("tabActive").textContent = `Active (${counts.OPEN + counts.IN_PROGRESS})`;
+    document.getElementById("tabResolved").textContent = `To verify (${resolved})`;
+    document.getElementById("tabClosed").textContent = `Closed (${counts.CLOSED})`;
+  }
+
+  function updateTabs() {
+    document.getElementById("tabActive").classList.toggle("active", currentView === "active");
+    document.getElementById("tabResolved").classList.toggle("active", currentView === "resolved");
+    document.getElementById("tabClosed").classList.toggle("active", currentView === "closed");
+    document.getElementById("loadMoreWrap").style.display =
+      currentView === "closed" && closedNextToken ? "flex" : "none";
+  }
+
+  // The time column of a row: how long it's been open, how long it's been waiting, or when it closed.
+  function rowTime(inc) {
+    if (isActiveStatus(inc.status)) {
+      return { prefix: "open ", since: inc.createdAt };
+    }
+    if (inc.status === "RESOLVED") {
+      return { prefix: "waiting ", since: inc.resolvedAt || inc.updatedAt || inc.createdAt };
+    }
+    return { text: formatDate(inc.closedAt || inc.createdAt) };
+  }
+
+  function renderList() {
+    const list = document.getElementById("incidentList");
+
+    if (listIncidents.length === 0) {
+      const empty = {
+        active: "No active incidents. All clear.",
+        resolved: "Nothing waiting for sign-off.",
+        closed: "No closed incidents yet."
+      };
+      list.innerHTML = `<div class="empty-state">${empty[currentView]}</div>`;
+      return;
+    }
+
+    // The API already returns each tab in the right order.
+    list.innerHTML = listIncidents.map(inc => {
+      const active = isActiveStatus(inc.status);
+      let ackBadge = "";
+      if (active && inc.acknowledged) {
+        ackBadge = `<span class="badge ack-badge">ACK</span>`;
+      } else if (active && inc.severity === "P1") {
+        ackBadge = `<span class="badge noack-badge">No ACK</span>`;
+      }
+      const t = rowTime(inc);
+      const timeText = t.since ? t.prefix + timeAgo(t.since) : t.text;
+      const liveAttrs = t.since ? `data-since="${escapeHtml(t.since)}" data-prefix="${escapeHtml(t.prefix)}"` : "";
+      const urgent = active && inc.severity === "P1" && !inc.acknowledged;
+      return `
+        <button class="incident-row ${inc.incidentId === selectedId ? "selected" : ""}" data-id="${escapeHtml(inc.incidentId)}">
+          <span class="sev sev-${escapeHtml(inc.severity)}">${escapeHtml(inc.severity)}</span>
+          <span>
+            <span class="inc-title">${escapeHtml(inc.title)}${ackBadge}</span><br>
+            <span class="inc-meta">${escapeHtml(inc.location)} · ${escapeHtml(inc.device)}</span>
+          </span>
+          <span class="badge row-status status-${escapeHtml(inc.status)}">${escapeHtml(statusLabel(inc.status))}</span>
+          <span class="inc-time ${urgent ? "urgent" : ""}" ${liveAttrs}>${escapeHtml(timeText)}</span>
+        </button>`;
+    }).join("");
+
+    list.querySelectorAll(".incident-row").forEach(row => {
+      row.addEventListener("click", () => openIncident(row.dataset.id));
+    });
+  }
+
+  async function loadActive() {
+    const result = await apiRequest("/incidents?view=active");
+    if (!result) return;
+    if (result.status !== 200) {
+      showToast("Failed to load incidents", true);
+      return;
+    }
+    renderStats(result.data.counts);
+    if (currentView !== "active") return;  // the user switched tab while this was loading
+    listIncidents = result.data.incidents || [];
+    renderList();
+    updateTabs();
+  }
+
+  async function loadResolved() {
+    const result = await apiRequest("/incidents?view=resolved");
+    if (!result) return;
+    if (result.status !== 200) {
+      showToast(result.data.message || "Failed to load incidents to verify", true);
+      return;
+    }
+    if (currentView !== "resolved") return;
+    listIncidents = result.data.incidents || [];
+    renderList();
+    updateTabs();
+  }
+
+  async function loadClosedPage(reset) {
+    if (reset) {
+      listIncidents = [];
+      closedNextToken = null;
+    }
+
+    let path = `/incidents?view=closed&limit=${CLOSED_PAGE_SIZE}`;
+    if (closedNextToken) {
+      // The token is base64 and can contain "=", so it must be URL-encoded.
+      path += `&nextToken=${encodeURIComponent(closedNextToken)}`;
+    }
+
+    const btn = document.getElementById("loadMoreBtn");
+    btn.disabled = true;
+    btn.textContent = "Loading…";
+    const result = await apiRequest(path);
+    btn.disabled = false;
+    btn.textContent = "Load more";
+
+    if (!result) return;
+    if (result.status !== 200) {
+      showToast(result.data.message || "Failed to load closed incidents", true);
+      return;
+    }
+    if (currentView !== "closed") return;
+
+    listIncidents = listIncidents.concat(result.data.incidents || []);
+    closedNextToken = result.data.nextToken;
+    renderList();
+    updateTabs();
+  }
+
+  // The counters always come from the active view, so it's loaded on every refresh.
+  async function loadIncidents() {
+    if (currentView === "active") {
+      await loadActive();
+    } else if (currentView === "resolved") {
+      await Promise.all([loadActive(), loadResolved()]);
+    } else {
+      await Promise.all([loadActive(), loadClosedPage(true)]);
+    }
+  }
+
+  async function refreshAfterChange() {
+    await loadIncidents();
+  }
+
+  function switchView(view) {
+    if (view === currentView) return;
+    currentView = view;
+    listIncidents = [];
+    document.getElementById("incidentList").innerHTML = `<div class="empty-state">Loading…</div>`;
+    updateTabs();
+    loadIncidents();
+  }
+
+  document.getElementById("tabActive").addEventListener("click", () => switchView("active"));
+  document.getElementById("tabResolved").addEventListener("click", () => switchView("resolved"));
+  document.getElementById("tabClosed").addEventListener("click", () => switchView("closed"));
+  document.getElementById("loadMoreBtn").addEventListener("click", () => loadClosedPage(false));
+
+  // ── Detail panel ──
+  function noteIsDirty() {
+    const note = document.getElementById("actionNote");
+    return !!pendingAction && !!note && note.value.trim() !== "";
+  }
+
+  // Protects a half-written note (resolution, sign-off or reopen reason) from being lost by accident.
+  function confirmDiscardNote() {
+    if (!noteIsDirty()) return true;
+    return window.confirm("Discard what you've written?");
+  }
+
+  async function openIncident(id) {
+    if (id === selectedId) return;
+    if (!confirmDiscardNote()) return;
+
+    selectedId = id;
+    pendingAction = null;
+    selectedIncident = listIncidents.find(i => i.incidentId === id) || null;
+    document.body.classList.add("panel-open");
+    renderPanel();
+    renderList();
+
+    // Fetch the latest version of this incident (someone else may have changed it).
+    await reloadSelected();
+  }
+
+  async function reloadSelected() {
+    if (!selectedId) return;
+    const requestedId = selectedId;
+    const result = await apiRequest(`/incidents/${encodeURIComponent(requestedId)}`);
+    if (!result || requestedId !== selectedId) return;
+    if (result.status === 200) {
+      selectedIncident = result.data;
+      // Don't wipe a note that's being typed.
+      if (!noteIsDirty()) renderPanel();
+    } else if (!selectedIncident) {
+      showToast(result.data.message || "Could not load incident", true);
+      closePanel(true);
+    }
+  }
+
+  function closePanel(force) {
+    if (!force && !confirmDiscardNote()) return;
+    selectedId = null;
+    selectedIncident = null;
+    pendingAction = null;
+    document.body.classList.remove("panel-open");
+    renderList();
+  }
+
+  document.getElementById("closePanelBtn").addEventListener("click", () => closePanel(false));
+  document.getElementById("backBtn").addEventListener("click", () => closePanel(false));
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape") return;
+    if (document.getElementById("modalBackdrop").classList.contains("show")) return;
+    if (pendingAction) {
+      // First Esc only cancels the open action form (asking first if there's text).
+      if (!confirmDiscardNote()) return;
+      pendingAction = null;
+      renderActions();
+      return;
+    }
+    if (selectedId) closePanel(false);
+  });
+
+  // Timeline: the incident's "history" list (resolve, reopen, close: who, when, note),
+  // plus creation and acknowledgement, in time order. Then the steps still to come.
+  // Incidents closed before Sprint 8.6 have no history, so they fall back to closedAt / closedBy.
+  function buildTimeline(inc) {
+    const events = [{ text: "Created", when: inc.createdAt }];
+
+    if (inc.acknowledged) {
+      events.push({
+        text: "Acknowledged" + (inc.acknowledgedBy ? ` · ${shortName(inc.acknowledgedBy)}` : ""),
+        when: inc.acknowledgedAt
+      });
+    }
+
+    const history = Array.isArray(inc.history) ? inc.history : [];
+    history.forEach(h => {
+      const who = h.by ? ` · ${shortName(h.by)}` : "";
+      if (h.action === "RESOLVED") {
+        events.push({ text: "Resolved" + who, when: h.at, note: h.note, kind: "resolve" });
+      } else if (h.action === "REOPENED") {
+        events.push({ text: "Reopened" + who, when: h.at, note: h.note, kind: "reopen" });
+      } else if (h.action === "CLOSED") {
+        events.push({ text: "Closed (signed off)" + who, when: h.at, note: h.note });
+      }
+    });
+
+    if (inc.status === "CLOSED" && !history.some(h => h.action === "CLOSED")) {
+      // Legacy close (before the manager sign-off step existed).
+      events.push({
+        text: "Closed" + (inc.closedBy ? ` · ${shortName(inc.closedBy)}` : ""),
+        when: inc.closedAt,
+        note: inc.resolutionNote
+      });
+    }
+
+    events.sort((a, b) => String(a.when || "").localeCompare(String(b.when || "")));
+    const steps = events.map(e => ({ ...e, done: true }));
+
+    if (isActiveStatus(inc.status)) {
+      if (!inc.acknowledged) steps.push({ done: false, text: "Not acknowledged yet" });
+      steps.push({ done: false, text: "Resolved by engineer" });
+      steps.push({ done: false, text: "Closed by manager (sign-off)" });
+    } else if (inc.status === "RESOLVED") {
+      steps.push({ done: false, text: "Waiting for manager sign-off" });
+    }
+    return steps;
+  }
+
+  function renderPanel() {
+    const inc = selectedIncident;
+    if (!inc) {
+      document.getElementById("panelTitle").textContent = "Loading…";
+      document.getElementById("panelBadges").innerHTML = "";
+      document.getElementById("panelAge").textContent = "";
+      document.getElementById("panelBody").innerHTML = "";
+      document.getElementById("panelActions").innerHTML = "";
+      return;
+    }
+
+    const isClosed = inc.status === "CLOSED";
+
+    document.getElementById("panelBadges").innerHTML = `
+      <span class="sev sev-${escapeHtml(inc.severity)}">${escapeHtml(inc.severity)}</span>
+      <span class="badge status-${escapeHtml(inc.status)}">${escapeHtml(statusLabel(inc.status))}</span>
+      ${inc.acknowledged ? `<span class="badge" style="color:var(--green)">ACK</span>` : ""}
+      ${inc.reopenCount ? `<span class="badge" style="color:var(--amber)">Reopened ×${escapeHtml(inc.reopenCount)}</span>` : ""}`;
+
+    document.getElementById("panelTitle").textContent = inc.title || "";
+    updatePanelAge();
+
+    const timelineHtml = buildTimeline(inc).map(s => `
+      <div class="tl-item">
+        <span class="tl-dot ${s.done ? (s.kind || "") : "pending"}"></span>
+        <div>
+          <div class="tl-text ${s.done ? "" : "pending"}">${escapeHtml(s.text)}</div>
+          ${s.when ? `<div class="tl-when">${escapeHtml(formatDate(s.when))}</div>` : ""}
+          ${s.note ? `<div class="tl-note ${s.kind || ""}">${escapeHtml(s.note)}</div>` : ""}
+        </div>
+      </div>`).join("");
+
+    const attachments = inc.attachments || [];
+    const filesHtml = attachments.length
+      ? attachments.map(a => `
+          <div class="file-row">
+            <span class="file-icon">${fileKind(a.fileName)}</span>
+            <span class="file-name" title="${escapeHtml(a.fileName)}">${escapeHtml(a.fileName)}</span>
+            <button class="ghost-btn view-btn" data-attachment="${escapeHtml(a.attachmentId)}">View</button>
+          </div>`).join("")
+      : `<div class="no-files">No files attached.</div>`;
+
+    // Rule: once CLOSED, nothing changes, so there's no upload control at all.
+    // (RESOLVED still allows files, so a forgotten photo can be added before sign-off.)
+    const uploadHtml = isClosed
+      ? `<div class="locked">Closed incidents are locked: no more files can be attached.</div>`
+      : !canOperate
+      ? ""
+      : `<div class="upload">
+          <input type="file" id="uploadInput" accept="image/jpeg,image/png,application/pdf,text/plain" aria-label="Choose a file to attach">
+          <button class="ghost-btn" id="uploadBtn">Upload</button>
+          <span class="upload-status" id="uploadStatus"></span>
+        </div>`;
+
+    document.getElementById("panelBody").innerHTML = `
+      <section>
+        <div class="section-label">Description</div>
+        <div class="description">${escapeHtml(inc.description || "—")}</div>
+      </section>
+
+      <section class="facts">
+        <div><div class="fact-k">Location</div><div class="fact-v">${escapeHtml(inc.location || "—")}</div></div>
+        <div><div class="fact-k">Device</div><div class="fact-v">${escapeHtml(inc.device || "—")}</div></div>
+        <div><div class="fact-k">Created</div><div class="fact-v">${escapeHtml(formatDate(inc.createdAt))}</div></div>
+        <div><div class="fact-k">Incident ID</div><div class="fact-v mono" title="${escapeHtml(inc.incidentId)}">${escapeHtml(String(inc.incidentId).slice(0, 8))}…</div></div>
+      </section>
+
+      <section>
+        <div class="section-label">Timeline</div>
+        <div class="timeline">${timelineHtml}</div>
+      </section>
+
+      <section>
+        <div class="section-label">Attachments (${attachments.length})</div>
+        <div class="files">${filesHtml}</div>
+        ${uploadHtml}
+      </section>`;
+
+    document.querySelectorAll(".view-btn").forEach(btn => {
+      btn.addEventListener("click", () => viewAttachment(btn.dataset.attachment, btn));
+    });
+    const uploadBtn = document.getElementById("uploadBtn");
+    if (uploadBtn) uploadBtn.addEventListener("click", uploadAttachment);
+
+    renderActions();
+  }
+
+  function updatePanelAge() {
+    const el = document.getElementById("panelAge");
+    const inc = selectedIncident;
+    if (!inc) { el.textContent = ""; return; }
+    el.classList.remove("urgent");
+    if (inc.status === "CLOSED") {
+      el.textContent = `Closed ${formatDate(inc.closedAt)}`;
+    } else if (inc.status === "RESOLVED") {
+      el.textContent = `Resolved ${timeAgo(inc.resolvedAt || inc.updatedAt)} ago · waiting for sign-off`;
+    } else {
+      el.textContent = `Open for ${timeAgo(inc.createdAt)}`;
+      el.classList.toggle("urgent", inc.severity === "P1" && !inc.acknowledged);
+    }
+  }
+
+  // The three actions that need a note. Each has its own route and body field.
+  const ACTION_FORMS = {
+    resolve: {
+      allowedFrom: ["OPEN", "IN_PROGRESS"],
+      question: sev => `Resolve this ${sev}? A manager will then verify it and close it.`,
+      label: "What fixed it? (required)",
+      placeholder: "e.g. Replaced faulty PSU in SW-CORE-01",
+      required: true,
+      css: "resolve",
+      confirmText: "Confirm resolve",
+      busyText: "Resolving…",
+      path: "resolve",
+      field: "resolutionNote",
+      done: "Incident resolved. Waiting for manager sign-off."
+    },
+    close: {
+      allowedFrom: ["RESOLVED"],
+      question: () => "Sign off and close? The incident is then locked: no more changes or files.",
+      label: "Sign-off note (optional)",
+      placeholder: "e.g. Verified with site team, link stable for 24 h",
+      required: false,
+      css: "signoff",
+      confirmText: "Confirm close",
+      busyText: "Closing…",
+      path: "close",
+      field: "closeNote",
+      done: "Incident closed"
+    },
+    reopen: {
+      allowedFrom: ["RESOLVED"],
+      question: () => "Send it back to the engineers? It returns to In progress.",
+      label: "Why isn't it fixed? (required)",
+      placeholder: "e.g. Alarms still showing on the far-end port",
+      required: true,
+      css: "reopen",
+      confirmText: "Confirm reopen",
+      busyText: "Reopening…",
+      path: "reopen",
+      field: "reason",
+      done: "Incident reopened"
+    }
+  };
+
+  function renderActions() {
+    const inc = selectedIncident;
+    const box = document.getElementById("panelActions");
+
+    if (!inc) {
+      box.innerHTML = "";
+      return;
+    }
+
+    if (inc.status === "CLOSED") {
+      box.innerHTML = `<div class="hint">Closed and signed off. This incident is locked.</div>`;
+      return;
+    }
+
+    // If the incident changed status under an open form (someone else acted), drop the form.
+    if (pendingAction && !ACTION_FORMS[pendingAction].allowedFrom.includes(inc.status)) {
+      pendingAction = null;
+    }
+
+    if (pendingAction) {
+      renderActionForm(box, inc, ACTION_FORMS[pendingAction]);
+      return;
+    }
+
+    if (inc.status === "RESOLVED") {
+      if (!isManager) {
+        box.innerHTML = `<div class="hint">Resolved. Waiting for manager sign-off.</div>`;
+        return;
+      }
+      box.innerHTML = `
+        <div class="action-row">
+          <button class="act-btn reopen" id="reopenBtn">Reopen</button>
+          <button class="act-btn signoff" id="signoffBtn">Close</button>
+        </div>`;
+      document.getElementById("reopenBtn").addEventListener("click", () => openForm("reopen"));
+      document.getElementById("signoffBtn").addEventListener("click", () => openForm("close"));
+      return;
+    }
+
+    // OPEN or IN_PROGRESS
+    if (!canOperate) {
+      box.innerHTML = `<div class="hint">View only: your account has no engineer, manager or admin role.</div>`;
+      return;
+    }
+    const buttons = [];
+    if (!inc.acknowledged) buttons.push(`<button class="act-btn ack" id="ackBtn">Acknowledge</button>`);
+    if (inc.status === "OPEN") buttons.push(`<button class="act-btn" id="startBtn">Start work</button>`);
+    buttons.push(`<button class="act-btn resolve" id="resolveBtn">Resolve</button>`);
+
+    box.innerHTML = `<div class="action-row">${buttons.join("")}</div>`;
+
+    const ackBtn = document.getElementById("ackBtn");
+    if (ackBtn) ackBtn.addEventListener("click", () => runAction(ackBtn, acknowledgeIncident));
+    const startBtn = document.getElementById("startBtn");
+    if (startBtn) startBtn.addEventListener("click", () => runAction(startBtn, markInProgress));
+    const resolveBtn = document.getElementById("resolveBtn");
+    if (resolveBtn) resolveBtn.addEventListener("click", () => openForm("resolve"));
+  }
+
+  function openForm(action) {
+    pendingAction = action;
+    renderActions();
+  }
+
+  function renderActionForm(box, inc, form) {
+    box.innerHTML = `
+      <div class="action-box">
+        <p>${escapeHtml(form.question(inc.severity))}</p>
+        <label class="section-label" for="actionNote">${escapeHtml(form.label)}</label>
+        <textarea id="actionNote" maxlength="${NOTE_MAX}" placeholder="${escapeHtml(form.placeholder)}"></textarea>
+        <div class="char-count" id="noteCount">0 / ${NOTE_MAX}</div>
+        <div class="action-row">
+          <button class="act-btn" id="cancelActionBtn">Cancel</button>
+          <button class="act-btn confirm ${form.css}" id="confirmActionBtn" ${form.required ? "disabled" : ""}>${escapeHtml(form.confirmText)}</button>
+        </div>
+      </div>`;
+
+    const note = document.getElementById("actionNote");
+    const confirmBtn = document.getElementById("confirmActionBtn");
+    note.addEventListener("input", () => {
+      document.getElementById("noteCount").textContent = `${note.value.length} / ${NOTE_MAX}`;
+      // A required note must have real text before the button wakes up.
+      if (form.required) confirmBtn.disabled = note.value.trim() === "";
+    });
+    note.focus();
+    document.getElementById("cancelActionBtn").addEventListener("click", () => {
+      if (!confirmDiscardNote()) return;
+      pendingAction = null;
+      renderActions();
+    });
+    confirmBtn.addEventListener("click", () => submitAction(form));
+  }
+
+  // Disables a button while its request runs, so a double tap can't send it twice.
+  async function runAction(button, action) {
+    button.disabled = true;
+    try {
+      await action();
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // ── Actions ──
+  async function acknowledgeIncident() {
+    const result = await apiRequest(`/incidents/${encodeURIComponent(selectedId)}/acknowledge`, { method: "POST" });
+    if (!result) return;
+    if (result.status === 200) {
+      showToast("Incident acknowledged");
+      await Promise.all([reloadSelected(), refreshAfterChange()]);
+    } else {
+      showToast(result.data.message || "Acknowledge failed", true);
+    }
+  }
+
+  async function markInProgress() {
+    const result = await apiRequest(`/incidents/${encodeURIComponent(selectedId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ status: "IN_PROGRESS" })
+    });
+    if (!result) return;
+    if (result.status === 200) {
+      showToast("Work started");
+      await Promise.all([reloadSelected(), refreshAfterChange()]);
+    } else {
+      showToast(result.data.message || "Update failed", true);
+    }
+  }
+
+  // Resolve, Close or Reopen: posts the note to the action's own route.
+  async function submitAction(form) {
+    const btn = document.getElementById("confirmActionBtn");
+    const note = document.getElementById("actionNote").value.trim();
+    if (form.required && !note) return;
+
+    btn.disabled = true;
+    btn.textContent = form.busyText;
+
+    const result = await apiRequest(`/incidents/${encodeURIComponent(selectedId)}/${form.path}`, {
+      method: "POST",
+      body: JSON.stringify(note ? { [form.field]: note } : {})
+    });
+
+    if (!result) return;
+    if (result.status === 200) {
+      pendingAction = null;
+      selectedIncident = result.data;
+      showToast(form.done);
+      renderPanel();
+      await refreshAfterChange();
+    } else {
+      btn.disabled = false;
+      btn.textContent = form.confirmText;
+      showToast(result.data.message || "Action failed", true);
+      // 409 = someone else changed it first: close the form and show the latest state.
+      if (result.status === 409) {
+        pendingAction = null;
+        await reloadSelected();
+      }
+    }
+  }
+
+  // Opens an attachment in a new tab.
+  // Phone browsers (especially iPhone Safari) block new tabs opened AFTER waiting for
+  // a network request. So the tab is opened immediately on tap, and the file's
+  // short-lived link is loaded into it once the API returns it.
+  async function viewAttachment(attachmentId, button) {
+    const newTab = window.open("", "_blank");
+    if (newTab) {
+      try {
+        newTab.document.title = "Opening file…";
+        newTab.document.body.style.cssText = "background:#080a0f;color:#e8e4dc;font-family:sans-serif;padding:24px";
+        newTab.document.body.textContent = "Opening file…";
+      } catch (e) { /* not important */ }
+    }
+
+    button.disabled = true;
+    const result = await apiRequest(
+      `/incidents/${encodeURIComponent(selectedId)}/attachments/${encodeURIComponent(attachmentId)}`
+    );
+    button.disabled = false;
+
+    if (!result || result.status !== 200 || !result.data.downloadUrl) {
+      if (newTab) newTab.close();
+      if (result) showToast(result.data.message || "Could not open file", true);
+      return;
+    }
+
+    if (newTab) {
+      newTab.opener = null;
+      newTab.location.href = result.data.downloadUrl;
+    } else {
+      // Pop-ups fully blocked: give the user a direct link to tap instead.
+      const link = document.createElement("a");
+      link.href = result.data.downloadUrl;
+      link.target = "_blank";
+      link.rel = "noopener";
+      link.textContent = "Tap to open";
+      button.replaceWith(link);
+      showToast("Tap \"Tap to open\" to view the file");
+    }
+  }
+
+  async function uploadAttachment() {
+    const input = document.getElementById("uploadInput");
+    const status = document.getElementById("uploadStatus");
+    const button = document.getElementById("uploadBtn");
+    const file = input.files[0];
+
+    if (!file) {
+      status.textContent = "Choose a file first";
+      status.className = "upload-status err";
+      return;
+    }
+
+    button.disabled = true;
+    status.textContent = "Preparing…";
+    status.className = "upload-status";
+
+    try {
+      // Step 1: ask our API for a presigned upload URL
+      const urlResult = await apiRequest(`/incidents/${encodeURIComponent(selectedId)}/attachments`, {
+        method: "POST",
+        body: JSON.stringify({ fileName: file.name, contentType: file.type })
+      });
+      if (!urlResult) return;
+      if (urlResult.status !== 200) {
+        status.textContent = urlResult.data.message || "Could not get upload URL";
+        status.className = "upload-status err";
+        return;
+      }
+
+      // Step 2: send the file straight to S3 (this needs the bucket's CORS rule)
+      status.textContent = "Uploading…";
+      const uploadResponse = await fetch(urlResult.data.uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file
+      });
+      if (!uploadResponse.ok) throw new Error("S3 upload failed");
+
+      showToast("File attached");
+      await reloadSelected();
+    } catch (error) {
+      status.textContent = "Upload failed";
+      status.className = "upload-status err";
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  // Keep "open N min" / "waiting N min" fresh without reloading anything.
+  setInterval(() => {
+    document.querySelectorAll(".inc-time[data-since]").forEach(el => {
+      el.textContent = el.dataset.prefix + timeAgo(el.dataset.since);
+    });
+    updatePanelAge();
+  }, 30000);
+
+  // ── Sign out ──
+  document.getElementById("logoutBtn").addEventListener("click", () => {
+    if (!confirmDiscardNote()) return;
+    sessionStorage.clear();
+    window.location.href = "login.html";
+  });
+
+  // ── New incident modal ──
+  const modalBackdrop = document.getElementById("modalBackdrop");
+  const newIncidentForm = document.getElementById("newIncidentForm");
+  const modalStatus = document.getElementById("modalStatus");
+  const submitIncidentBtn = document.getElementById("submitIncidentBtn");
+
+  document.getElementById("newIncidentBtn").addEventListener("click", () => modalBackdrop.classList.add("show"));
+
+  document.getElementById("cancelBtn").addEventListener("click", () => {
+    modalBackdrop.classList.remove("show");
+    newIncidentForm.reset();
+    modalStatus.classList.remove("show");
+  });
+
+  newIncidentForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    submitIncidentBtn.disabled = true;
+    submitIncidentBtn.textContent = "Creating…";
+    modalStatus.classList.remove("show");
+
+    const body = {
+      title: document.getElementById("f-title").value,
+      description: document.getElementById("f-description").value,
+      severity: document.getElementById("f-severity").value,
+      location: document.getElementById("f-location").value,
+      device: document.getElementById("f-device").value
+    };
+
+    const result = await apiRequest("/incidents", { method: "POST", body: JSON.stringify(body) });
+
+    submitIncidentBtn.disabled = false;
+    submitIncidentBtn.textContent = "Create Incident";
+    if (!result) return;
+
+    if (result.status === 201) {
+      modalBackdrop.classList.remove("show");
+      newIncidentForm.reset();
+      showToast("Incident created");
+      if (currentView === "active") {
+        await loadActive();
+      } else {
+        switchView("active");
+      }
+    } else {
+      modalStatus.textContent = result.data.message || "Failed to create incident";
+      modalStatus.classList.add("show");
+    }
+  });
+
+  // Warn before leaving the page with an unsaved note.
+  window.addEventListener("beforeunload", (event) => {
+    if (noteIsDirty()) {
+      event.preventDefault();
+      event.returnValue = "";
+    }
+  });
+
+  loadIncidents();
+</script>
+
+</body>
+</html>
