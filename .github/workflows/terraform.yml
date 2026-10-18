@@ -1,0 +1,95 @@
+# Terraform CI/CD for the CloudOps platform.
+#   Pull request -> plan  (read-only role, result in the job log)
+#   Merge to main -> apply (needs your approval in the "production" environment)
+# AWS access is OIDC only: no AWS keys are stored in GitHub.
+name: terraform
+
+on:
+  pull_request:
+    branches: [main]
+    paths: ["terraform/**", ".github/workflows/terraform.yml"]
+  push:
+    branches: [main]
+    paths: ["terraform/**", ".github/workflows/terraform.yml"]
+  workflow_dispatch: # manual run (apply job still needs main + approval)
+
+permissions:
+  contents: read
+  id-token: write # lets the job ask GitHub for its OIDC token
+
+# Never two Terraform runs at once (the state lock would also stop it).
+concurrency:
+  group: terraform-prod
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: eu-west-2
+  TF_VERSION: 1.16.6
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  TF_VAR_alert_email: ${{ secrets.TF_VAR_ALERT_EMAIL }}
+
+defaults:
+  run:
+    working-directory: terraform
+
+jobs:
+  plan:
+    name: plan (pull request)
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: AWS credentials (read-only plan role, via OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Format check
+        run: terraform fmt -check -recursive
+
+      - name: Init
+        run: terraform init
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Plan
+        run: terraform plan -lock-timeout=5m
+
+  apply:
+    name: apply (main, after approval)
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production # waits for your approval; only main may use it
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: AWS credentials (apply role, via OIDC)
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          mask-aws-account-id: true
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Init
+        run: terraform init
+
+      - name: Plan
+        run: terraform plan -lock-timeout=5m -out=tfplan
+
+      - name: Apply exactly that plan
+        run: terraform apply -lock-timeout=5m tfplan
