@@ -17,8 +17,9 @@ variable "environment" {
 }
 
 variable "alert_email" {
-  description = "Email address that receives P1 escalations. Set in terraform.tfvars (not in Git)."
+  description = "Email address that receives P1 escalations and alarms. Set in terraform.tfvars (not in Git) or TF_VAR_alert_email in CI."
   type        = string
+  sensitive   = true # never printed in plan/apply output (CI logs of a public repo are public)
 }
 
 variable "log_retention_days" {
