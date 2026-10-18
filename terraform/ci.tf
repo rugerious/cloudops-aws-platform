@@ -12,6 +12,16 @@ variable "github_repo" {
   default     = "rugerious/cloudops-aws-platform"
 }
 
+# GitHub now puts immutable IDs in the token's "sub" claim:
+#   repo:<owner>@<owner_id>/<repo>@<repo_id>:...
+# The IDs never change, even if the repo is renamed or re-created by someone
+# else with the same name, so this is the stricter of the two formats.
+variable "github_repo_ids" {
+  description = "owner@owner_id/repo@repo_id, as GitHub writes it in the OIDC sub claim"
+  type        = string
+  default     = "rugerious@280082370/cloudops-aws-platform@1352460283"
+}
+
 locals {
   github_oidc_host = "token.actions.githubusercontent.com"
   state_bucket     = "cloudops-tfstate-xyzw05" # same as backend.tf (backend blocks can't use variables)
@@ -27,8 +37,8 @@ resource "aws_iam_openid_connect_provider" "github" {
 # Trust policy shared shape: right provider, right audience, right "sub" (who/where).
 data "aws_iam_policy_document" "github_trust" {
   for_each = {
-    plan  = "repo:${var.github_repo}:pull_request"
-    apply = "repo:${var.github_repo}:environment:production"
+    plan  = "pull_request"
+    apply = "environment:production"
   }
 
   statement {
@@ -45,7 +55,11 @@ data "aws_iam_policy_document" "github_trust" {
     condition {
       test     = "StringEquals"
       variable = "${local.github_oidc_host}:sub"
-      values   = [each.value]
+      # Either sub format is accepted (StringEquals with a list = "any of these").
+      values = [
+        "repo:${var.github_repo_ids}:${each.value}", # current format (IDs)
+        "repo:${var.github_repo}:${each.value}",     # classic format (names)
+      ]
     }
   }
 }
