@@ -8,7 +8,7 @@ from botocore.config import Config
 dynamodb = boto3.resource("dynamodb")
 table = dynamodb.Table(os.environ["TABLE_NAME"])
 
-BUCKET_NAME = os.environ["BUCKET_NAME"]
+BUCKET_NAME = os.environ["ATTACHMENTS_BUCKET"]
 URL_EXPIRY_SECONDS = 300  # the link stops working after 5 minutes
 
 # Signature v4 + the bucket's region, so the presigned URL works first time
