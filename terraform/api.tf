@@ -53,7 +53,8 @@ resource "aws_apigatewayv2_authorizer" "cognito" {
 
 # One Lambda integration per function (incident-lifecycle serves two routes).
 resource "aws_apigatewayv2_integration" "lambda" {
-  for_each               = local.lambda_functions
+  # Only functions behind the API (ai-triage is started by EventBridge, not HTTP).
+  for_each               = { for name, fn in local.lambda_functions : name => fn if name != "ai-triage" }
   api_id                 = aws_apigatewayv2_api.http.id
   integration_type       = "AWS_PROXY"
   integration_method     = "POST"
