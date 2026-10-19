@@ -1,4 +1,4 @@
-# The 9 API functions. Code = exactly what runs today (downloaded by the
+# The 9 API functions (+ ai-triage, Sprint 11, started by EventBridge). Code = exactly what runs today (downloaded by the
 # 14 Oct inventory) + one change: create-incident reads EVENT_BUS_NAME from
 # its environment instead of the hardcoded "cloudops-dev-events".
 #
@@ -15,6 +15,14 @@ locals {
   table_arn       = aws_dynamodb_table.incidents.arn
   attachments_arn = aws_s3_bucket.this["attachments"].arn
   geocode_arn     = "arn:aws:geo-places:${var.region}::provider/default"
+
+  # Sprint 11 AI triage. An "eu." inference profile may run the model in any EU
+  # region, so the role needs the profile AND the model in eu-* regions.
+  bedrock_profile_arn = "arn:aws:bedrock:${var.region}:${local.account_id}:inference-profile/${var.bedrock_model_id}"
+  bedrock_model_arn   = "arn:aws:bedrock:eu-*::foundation-model/${trimprefix(var.bedrock_model_id, "eu.")}*"
+
+  # Functions that need more than the default 10 s (a model reply takes a few seconds).
+  lambda_timeouts = { "ai-triage" = 30 }
 
   # One entry per function: its environment variables and its permissions.
   # Every action listed here is a call the function's code really makes.
@@ -88,6 +96,18 @@ locals {
         { sid = "ReadIncidentAttachments", actions = ["dynamodb:GetItem"], resources = [local.table_arn] },
         # ListBucket deliberately NOT granted (bug 14).
         { sid = "SignDownloadUrl", actions = ["s3:GetObject"], resources = ["${local.attachments_arn}/incidents/*"] },
+      ]
+    }
+    # Not behind the API: started by EventBridge for every new incident (ai.tf).
+    "ai-triage" = {
+      env = {
+        TABLE_NAME = aws_dynamodb_table.incidents.name
+        MODEL_ID   = var.bedrock_model_id
+      }
+      statements = [
+        # Writes ONLY the aiSuggestion field (the code never sets severity).
+        { sid = "SaveSuggestion", actions = ["dynamodb:UpdateItem"], resources = [local.table_arn] },
+        { sid = "AskTheModel", actions = ["bedrock:InvokeModel"], resources = [local.bedrock_profile_arn, local.bedrock_model_arn] },
       ]
     }
   }
@@ -178,7 +198,7 @@ resource "aws_lambda_function" "this" {
   architectures = ["arm64"] # decision 11: Graviton, ~20% cheaper
   handler       = "lambda_function.lambda_handler"
   memory_size   = 128
-  timeout       = 10
+  timeout       = lookup(local.lambda_timeouts, each.key, 10)
 
   environment {
     variables = each.value.env

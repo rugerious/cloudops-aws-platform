@@ -709,6 +709,13 @@
   /* Phones: the panel is the whole screen, so no frame */
   @media (max-width: 900px) { .panel { box-shadow: none; } }
   @media (max-width: 760px) { nav { margin: 8px 8px 0; top: 8px; } }
+  /* ── AI triage suggestion (Sprint 11) ── */
+  .ai-box { border: 1px solid rgba(59,158,255,.35); border-radius: 10px; padding: 12px 14px; background: linear-gradient(180deg, rgba(59,158,255,.10), rgba(59,158,255,.03)); display: flex; flex-direction: column; gap: 6px; }
+  .ai-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-family: 'DM Mono', monospace; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--blue); }
+  .ai-summary { font-size: 14px; color: var(--ink); }
+  .ai-reason { font-size: 13px; color: var(--ink2); }
+  .ai-foot { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--muted); }
+  .ai-box .ghost-btn { align-self: flex-start; margin-top: 4px; }
 </style>
 </head>
 <body>
@@ -1204,6 +1211,57 @@
     return steps;
   }
 
+  // ── AI triage (Sprint 11): the AI suggests, a manager decides ──
+  // The suggestion is written a few seconds after creation by the ai-triage Lambda.
+  function aiHtml(inc) {
+    const ai = inc.aiSuggestion;
+    const ageMs = Date.now() - new Date(inc.createdAt).getTime();
+    if (!ai) {
+      // Only show "thinking" for brand-new incidents; older ones simply have no suggestion.
+      return ageMs < 120000
+        ? `<section class="ai-box"><div class="ai-head">AI triage · analysing…</div></section>`
+        : "";
+    }
+    const differs = ai.severity !== inc.severity;
+    const canApply = isManager && isActiveStatus(inc.status) && differs;
+    return `
+      <section class="ai-box">
+        <div class="ai-head">AI triage · suggests <span class="sev sev-${escapeHtml(ai.severity)}">${escapeHtml(ai.severity)}</span>
+          ${differs ? `<span style="color:var(--amber)">reporter chose ${escapeHtml(inc.severity)}</span>` : `<span style="color:var(--green)">agrees</span>`}</div>
+        <div class="ai-summary">${escapeHtml(ai.summary)}</div>
+        <div class="ai-reason">${escapeHtml(ai.reason)}</div>
+        ${canApply ? `<button class="ghost-btn" id="applyAiBtn" data-severity="${escapeHtml(ai.severity)}">Set severity to ${escapeHtml(ai.severity)}</button>` : ""}
+        <div class="ai-foot">Suggestion only. ${differs ? "A manager decides." : ""}</div>
+      </section>`;
+  }
+
+  // While a new incident waits for its suggestion, check again a few times.
+  let aiRefreshTimer = null;
+  function scheduleAiRefresh(inc) {
+    clearTimeout(aiRefreshTimer);
+    const ageMs = Date.now() - new Date(inc.createdAt).getTime();
+    if (inc.aiSuggestion || ageMs > 120000) return;
+    const id = inc.incidentId;
+    aiRefreshTimer = setTimeout(() => { if (selectedId === id) reloadSelected(); }, 5000);
+  }
+
+  // Manager accepts the AI's severity. The API checks the role again (only Managers/Admins).
+  async function applyAiSeverity(btn) {
+    btn.disabled = true;
+    const result = await apiRequest(`/incidents/${encodeURIComponent(selectedId)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ severity: btn.dataset.severity })
+    });
+    if (!result) return;
+    if (result.status === 200) {
+      showToast(`Severity set to ${btn.dataset.severity}`);
+      await Promise.all([reloadSelected(), refreshAfterChange()]);
+    } else {
+      btn.disabled = false;
+      showToast(result.data.message || "Could not change severity", true);
+    }
+  }
+
   function renderPanel() {
     const inc = selectedIncident;
     if (!inc) {
@@ -1263,6 +1321,7 @@
         <div class="section-label">Description</div>
         <div class="description">${escapeHtml(inc.description || "—")}</div>
       </section>
+      ${aiHtml(inc)}
 
       <section class="facts">
         <div><div class="fact-k">Location</div><div class="fact-v">${escapeHtml(inc.location || "—")}</div></div>
@@ -1287,6 +1346,9 @@
     });
     const uploadBtn = document.getElementById("uploadBtn");
     if (uploadBtn) uploadBtn.addEventListener("click", uploadAttachment);
+    const applyAiBtn = document.getElementById("applyAiBtn");
+    if (applyAiBtn) applyAiBtn.addEventListener("click", () => applyAiSeverity(applyAiBtn));
+    scheduleAiRefresh(inc);
 
     renderActions();
   }
