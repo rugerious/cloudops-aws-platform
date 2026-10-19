@@ -544,6 +544,171 @@
     .act-btn { padding: 14px 12px; }
     .facts { grid-template-columns: 1fr; }
   }
+  /* ════════════════════════════════════════════════════════════════
+     CLOUDOPS LIVE SKIN: 2000s-messenger look (glossy bars, gel buttons,
+     orbs). Style only: no layout, markup or behaviour changes.
+     Delete this block to get the previous look back.
+     ════════════════════════════════════════════════════════════════ */
+  :root {
+    --gloss-bar: linear-gradient(180deg, #22314d 0%, #18243b 48%, #101a2c 52%, #15223a 100%);
+    --gloss-btn: linear-gradient(180deg, #25344f 0%, #1a263d 48%, #121c2e 52%, #18253d 100%);
+    --gloss-amber: linear-gradient(180deg, #ffd27a 0%, #f8b13a 48%, #ea980f 52%, #f5a623 100%);
+    --gloss-edge: #2c3b5a;
+    --win-edge: #26324a;
+    --win-shadow: 0 18px 48px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+    --orb-light: inset 0 -2px 3px rgba(0,0,0,.45), inset 0 2px 2px rgba(255,255,255,.55), 0 0 0 1px rgba(0,0,0,.6);
+  }
+
+  /* Desk: faint grid with a soft blue glow */
+  body {
+    background-color: var(--bg);
+    background-image:
+      radial-gradient(ellipse at 30% 0%, rgba(59,158,255,.09), transparent 55%),
+      linear-gradient(#0e1219 1px, transparent 1px),
+      linear-gradient(90deg, #0e1219 1px, transparent 1px);
+    background-size: auto, 48px 48px, 48px 48px;
+    background-attachment: fixed;
+  }
+
+  /* Top bar = window title bar */
+  nav { background: var(--gloss-bar); border-bottom: 1px solid var(--win-edge); box-shadow: 0 2px 12px rgba(0,0,0,.4); }
+  .nav-user .role { border-radius: 10px; }
+
+  /* Glossy buttons */
+  .btn-logout, .tab-btn, .load-more-btn, .ghost-btn, .icon-btn, .act-btn, .btn-secondary {
+    background: var(--gloss-btn);
+    border: 1px solid var(--gloss-edge);
+    border-radius: 6px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.08);
+  }
+  .act-btn.ack, .act-btn.resolve, .act-btn.signoff, .act-btn.reopen { background: var(--gloss-btn); }
+  .act-btn.confirm { box-shadow: inset 0 1px 0 rgba(255,255,255,.35); }
+  .act-btn.confirm.resolve { background: linear-gradient(180deg, #8cc8ff 0%, #4aa6ff 48%, #2a8cf0 52%, #3b9eff 100%); }
+  .act-btn.confirm.signoff { background: linear-gradient(180deg, #8ff0b8 0%, #3fd987 48%, #22b866 52%, #2dce7a 100%); }
+  .act-btn.confirm.reopen  { background: var(--gloss-amber); }
+
+  /* Amber gel for the main actions */
+  .btn-new, .btn-primary {
+    background: var(--gloss-amber);
+    border: 1px solid #c98410;
+    border-radius: 6px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 8px rgba(245,166,35,.18);
+    font-weight: 700;
+  }
+  .btn-new:hover, .btn-primary:hover:not(:disabled) { background: var(--gloss-amber); filter: brightness(1.08); }
+
+  /* Counters = glossy tiles */
+  .stat-strip { gap: 6px; background: none; border: none; }
+  .stat-cell {
+    background: var(--gloss-btn);
+    border: 1px solid var(--gloss-edge);
+    border-radius: 8px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.07), 0 6px 18px rgba(0,0,0,.35);
+  }
+
+  /* Tabs = separate glossy buttons; the active one lights up blue */
+  .tabs { gap: 4px; border-bottom: none; margin-bottom: 10px; }
+  .tab-btn { margin-bottom: 0; padding: 9px 16px; }
+  .tab-btn.active { border-color: var(--blue); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 0 0 1px rgba(59,158,255,.25); }
+
+  /* Incident list = a window, rows like contacts */
+  #incidentList {
+    gap: 0;
+    border: 1px solid var(--win-edge);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #0a0d13;
+    box-shadow: var(--win-shadow);
+  }
+  .incident-row { background: transparent; border-bottom: 1px solid #141c28; }
+  .incident-row:last-child { border-bottom: none; }
+  .incident-row:hover { background: #141e30; }
+  .incident-row.selected { background: #18263d; border-left-color: var(--blue); }
+
+  /* Severity = orb + label */
+  .sev { border: none; padding: 0; display: inline-flex; align-items: center; gap: 7px; }
+  .sev::before {
+    content: '';
+    width: 13px; height: 13px; border-radius: 50%;
+    background: currentColor;
+    box-shadow: var(--orb-light);
+    flex-shrink: 0;
+  }
+  .badge { border-radius: 4px; }
+
+  /* Detail panel = window docked on the right */
+  .panel {
+    border-left: 1px solid var(--win-edge);
+    background: linear-gradient(180deg, #121b2b 0px, #0d1017 260px);
+    box-shadow: -18px 0 48px rgba(0,0,0,.45);
+  }
+  .panel-head { background: var(--gloss-bar); border-bottom: 1px solid var(--win-edge); }
+  .panel-actions { background: #0d1017; }
+  .file-row { border-radius: 6px; background: var(--gloss-btn); border-color: var(--gloss-edge); }
+
+  /* History: orbs on the line, notes as chat bubbles */
+  .tl-dot { box-shadow: var(--orb-light); width: 11px; height: 11px; margin-top: 3px; }
+  .tl-dot.pending { box-shadow: none; }
+  .tl-note { border-left: none; border-radius: 10px 10px 10px 2px; border: 1px solid rgba(45,206,122,.25); }
+  .tl-note.reopen { border-color: rgba(245,166,35,.3); }
+  .tl-note.resolve { border-color: rgba(59,158,255,.3); }
+
+  /* Forms */
+  .action-box textarea, .field input, .field select, .field textarea { border-radius: 6px; background: #0a0d13; border-color: var(--win-edge); }
+  .action-box textarea:focus, .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--amber); }
+
+  /* New incident = a window with a glossy title bar */
+  .modal {
+    border: 1px solid var(--win-edge);
+    border-radius: 10px;
+    background: linear-gradient(180deg, #121b2b 0px, #0d1017 240px);
+    box-shadow: var(--win-shadow);
+    padding: 0 28px 28px;
+  }
+  .modal h2 {
+    margin: 0 -28px 22px;
+    padding: 10px 28px 8px;
+    background: var(--gloss-bar);
+    border-bottom: 1px solid var(--win-edge);
+    font-size: 22px;
+  }
+
+  .toast { border-radius: 8px; background: var(--gloss-bar); box-shadow: 0 10px 30px rgba(0,0,0,.5); }
+
+
+  /* ── Round every corner (Messenger windows never had square edges) ── */
+  /* Top bar floats as a rounded window instead of touching the screen edges */
+  nav { margin: 10px 12px 0; border: 1px solid var(--win-edge); border-radius: 10px; top: 10px; }
+  .badge, .nav-user .role { border-radius: 10px; padding-left: 9px; padding-right: 9px; }
+  .file-icon { border-radius: 4px; }
+  .modal-status { border-left: none; border: 1px solid var(--rust); border-radius: 6px; }
+  .upload input[type="file"]::file-selector-button {
+    font: inherit; color: var(--ink); cursor: pointer; margin-right: 8px; padding: 6px 12px;
+    background: var(--gloss-btn); border: 1px solid var(--gloss-edge); border-radius: 6px;
+  }
+  /* List rows = rounded "contacts" inside the window, selection is a rounded highlight */
+  #incidentList { padding: 6px; }
+  .incident-row { border-bottom: none; border-left: none; border-radius: 8px; }
+  .incident-row.selected { box-shadow: inset 0 0 0 1px var(--gloss-edge), inset 3px 0 0 var(--blue); }
+  .empty-state { border-radius: 8px; }
+
+  /* Wide screens: the panel floats as a rounded window beside the list */
+  @media (min-width: 901px) {
+    .panel {
+      top: calc(var(--nav-h) + 22px);
+      right: 12px;
+      height: calc(100vh - var(--nav-h) - 34px);
+      height: calc(100dvh - var(--nav-h) - 34px);
+      border: 1px solid var(--win-edge);
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: var(--win-shadow);
+    }
+    body.panel-open .wrap { margin-right: calc(var(--panel-w) + 36px); }
+  }
+  /* Phones: the panel is the whole screen, so no frame */
+  @media (max-width: 900px) { .panel { box-shadow: none; } }
+  @media (max-width: 760px) { nav { margin: 8px 8px 0; top: 8px; } }
 </style>
 </head>
 <body>

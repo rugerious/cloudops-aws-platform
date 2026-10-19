@@ -210,6 +210,44 @@
   /* new-password challenge, hidden by default */
   #newPasswordField { display: none; }
   #newPasswordField.show { display: block; }
+  /* ════════════════════════════════════════════════════════════════
+     CLOUDOPS LIVE SKIN: 2000s-messenger look. Style only.
+     Delete this block to get the previous look back.
+     ════════════════════════════════════════════════════════════════ */
+  /* The sign-in card becomes a rounded window with a glossy title bar */
+  .card {
+    border: 1px solid #26324a;
+    border-radius: 10px;
+    overflow: hidden;
+    padding: 58px 32px 32px;
+    background: linear-gradient(180deg, #121b2b 0px, #0d1017 240px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.06);
+  }
+  .card::before {
+    content: 'CloudOps · Sign in';
+    height: 34px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    background: linear-gradient(180deg, #22314d 0%, #18243b 48%, #101a2c 52%, #15223a 100%);
+    border-bottom: 1px solid #26324a;
+  }
+  .field input { border-radius: 6px; background: #0a0d13; border-color: #26324a; }
+  .field input:focus { border-color: var(--amber); }
+  .submit {
+    border-radius: 6px;
+    border: 1px solid #c98410;
+    font-weight: 700;
+    background: linear-gradient(180deg, #ffd27a 0%, #f8b13a 48%, #ea980f 52%, #f5a623 100%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.4), 0 2px 8px rgba(245,166,35,.18);
+  }
+  .submit:hover { border-color: #c98410; background: linear-gradient(180deg, #ffd27a 0%, #f8b13a 48%, #ea980f 52%, #f5a623 100%); filter: brightness(1.08); }
+  .status { border-left: none; border: 1px solid var(--border); border-radius: 6px; }
+  .brand-mark::before, .brand-mark::after { border-radius: 1px; }
 </style>
 </head>
 <body>
