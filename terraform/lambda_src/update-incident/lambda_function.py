@@ -25,17 +25,18 @@ VALID_SEVERITIES = ["P1", "P2", "P3", "P4"]
 ACTIVE_STATUSES = ["OPEN", "IN_PROGRESS"]
 
 
-def decimal_default(obj):
-    if isinstance(obj, Decimal):
-        return int(obj) if obj == obj.to_integral_value() else float(obj)
-    raise TypeError(f"Not serializable: {type(obj)}")
+def decimal_to_json(value):
+    """Tells json.dumps how to handle Decimal values returned by DynamoDB."""
+    if isinstance(value, Decimal):
+        return int(value) if value == value.to_integral_value() else float(value)
+    raise TypeError(f"Object of type {type(value).__name__} is not JSON serializable")
 
 
 def respond(status_code, body):
     return {
         "statusCode": status_code,
         "headers": {"Content-Type": "application/json"},
-        "body": json.dumps(body, default=decimal_default)
+        "body": json.dumps(body, default=decimal_to_json)
     }
 
 

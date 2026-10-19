@@ -37,7 +37,7 @@ jobs:
   plan:
     name: plan (pull request)
     if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: ubuntu-latest moves to Ubuntu 26 from 19 Oct 2026
     steps:
       - uses: actions/checkout@v5
 
@@ -68,7 +68,7 @@ jobs:
   apply:
     name: apply (main, after approval)
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # pinned: ubuntu-latest moves to Ubuntu 26 from 19 Oct 2026
     environment: production # waits for your approval; only main may use it
     steps:
       - uses: actions/checkout@v5

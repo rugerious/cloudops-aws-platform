@@ -81,8 +81,8 @@ locals {
     }
     "get-attachment-url" = {
       env = {
-        TABLE_NAME  = aws_dynamodb_table.incidents.name
-        BUCKET_NAME = aws_s3_bucket.this["attachments"].id
+        TABLE_NAME         = aws_dynamodb_table.incidents.name
+        ATTACHMENTS_BUCKET = aws_s3_bucket.this["attachments"].id # same name as get-upload-url
       }
       statements = [
         { sid = "ReadIncidentAttachments", actions = ["dynamodb:GetItem"], resources = [local.table_arn] },
