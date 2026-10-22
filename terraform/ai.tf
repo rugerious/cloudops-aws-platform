@@ -12,7 +12,9 @@
 variable "bedrock_model_id" {
   description = "Bedrock inference profile for AI triage. eu. = the request stays in EU regions."
   type        = string
-  default     = "eu.anthropic.claude-haiku-5-5" # small, fast and cheap: triage is a short task
+  # Haiku 4.5: small, fast and cheap, enough for a short triage task.
+  # (Haiku 5.5 / Sonnet 5 are listed in London but "not available for this account".)
+  default = "eu.anthropic.claude-haiku-4-5-20251001-v1:0"
 }
 
 resource "aws_cloudwatch_event_rule" "ai_triage" {
