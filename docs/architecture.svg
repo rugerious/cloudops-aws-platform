@@ -1,0 +1,146 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 900" width="1280" height="900" role="img" aria-labelledby="title desc">
+<title id="title">CloudOps architecture</title>
+<desc id="desc">Serverless incident management on AWS: CloudFront, Cognito, API Gateway, Lambda, DynamoDB, S3; EventBridge to Step Functions for P1 escalation and to an AI triage Lambda using Amazon Bedrock; CI/CD with GitHub Actions, OIDC and Terraform.</desc>
+<defs><marker id="ah" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b7c96"/></marker>
+<style>
+.t{font:600 15px -apple-system,Segoe UI,Helvetica,Arial,sans-serif;fill:#e8e4dc}
+.s{font:12.5px -apple-system,Segoe UI,Helvetica,Arial,sans-serif;fill:#9aa7bb}
+.l{font:italic 12px -apple-system,Segoe UI,Helvetica,Arial,sans-serif;fill:#7f8ea6}
+.g{font:600 12px ui-monospace,Menlo,Consolas,monospace;letter-spacing:.08em;fill:#5f7090}
+.h{font:700 22px -apple-system,Segoe UI,Helvetica,Arial,sans-serif;fill:#e8e4dc}
+</style></defs>
+<rect width="1280" height="900" rx="16" fill="#080a0f"/>
+<text x="24" y="44" class="h">CloudOps <tspan fill="#f5a623">·</tspan> serverless incident management on AWS (eu-west-2)</text>
+<rect x="20" y="70" width="1240" height="370" rx="14" fill="#0e1420" stroke="#1d2738"/>
+<text x="36" y="92" class="g">REQUEST PATH</text>
+<rect x="20" y="455" width="1240" height="200" rx="14" fill="#0e1420" stroke="#1d2738"/>
+<text x="36" y="477" class="g">EVENT-DRIVEN: P1 ESCALATION + AI TRIAGE</text>
+<rect x="20" y="670" width="1240" height="210" rx="14" fill="#0e1420" stroke="#1d2738"/>
+<text x="36" y="692" class="g">CI/CD: GITHUB ACTIONS + TERRAFORM (NO STORED AWS KEYS)</text>
+<rect x="40" y="200" width="160" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="40" y="210" width="4" height="44" rx="2" fill="#94a3b8"/>
+<text x="56" y="225" class="t">Browser / phone</text>
+<text x="56" y="244" class="s">engineers, managers</text>
+<rect x="250" y="100" width="220" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="250" y="110" width="4" height="44" rx="2" fill="#3b9eff"/>
+<text x="266" y="125" class="t">CloudFront + WAF</text>
+<text x="266" y="144" class="s">HTTPS, security headers</text>
+<rect x="530" y="100" width="240" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="530" y="110" width="4" height="44" rx="2" fill="#2dce7a"/>
+<text x="546" y="125" class="t">S3 · dashboard</text>
+<text x="546" y="144" class="s">private, Origin Access Control</text>
+<rect x="250" y="200" width="220" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="250" y="210" width="4" height="44" rx="2" fill="#3b9eff"/>
+<text x="266" y="225" class="t">Cognito</text>
+<text x="266" y="244" class="s">sign-in, JWT, role groups</text>
+<rect x="250" y="300" width="220" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="250" y="310" width="4" height="44" rx="2" fill="#3b9eff"/>
+<text x="266" y="325" class="t">API Gateway (HTTP API)</text>
+<text x="266" y="344" class="s">JWT on every route, throttling</text>
+<rect x="530" y="270" width="240" height="100" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="530" y="280" width="4" height="80" rx="2" fill="#f5a623"/>
+<text x="546" y="295" class="t">9 Lambda functions</text>
+<text x="546" y="314" class="s">Python 3.14 · arm64 (Graviton)</text>
+<text x="546" y="330" class="s">one least-privilege role each</text>
+<text x="546" y="346" class="s">one route per state change</text>
+<rect x="830" y="100" width="210" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="830" y="110" width="4" height="44" rx="2" fill="#2dce7a"/>
+<text x="846" y="125" class="t">DynamoDB · incidents</text>
+<text x="846" y="144" class="s">GSI on status, PITR</text>
+<rect x="830" y="190" width="210" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="830" y="200" width="4" height="44" rx="2" fill="#2dce7a"/>
+<text x="846" y="215" class="t">S3 · attachments</text>
+<text x="846" y="234" class="s">presigned PUT / GET</text>
+<rect x="830" y="280" width="210" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="830" y="290" width="4" height="44" rx="2" fill="#2dce7a"/>
+<text x="846" y="305" class="t">Location Service</text>
+<text x="846" y="324" class="s">geocoding</text>
+<rect x="1080" y="100" width="160" height="110" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="1080" y="110" width="4" height="90" rx="2" fill="#94a3b8"/>
+<text x="1096" y="125" class="t">CloudWatch</text>
+<text x="1096" y="144" class="s">30-day logs</text>
+<text x="1096" y="160" class="s">4 alarms</text>
+<text x="1096" y="176" class="s">→ SNS email</text>
+<path d="M200,222 L230,222 L230,132 L248,132" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="207" y="180" class="l" text-anchor="start">loads app</text>
+<path d="M470,132 L528,132" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M200,232 L248,232" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M200,244 L230,244 L230,332 L248,332" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="136" y="300" class="l" text-anchor="start">API calls + JWT</text>
+<path d="M470,332 L528,332" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M770,300 L800,300 L800,132 L828,132" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M770,312 L810,312 L810,222 L828,222" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M770,324 L820,324 L820,312 L828,312" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M120,264 L120,422 L935,422 L935,256" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)" stroke-dasharray="5 4"/>
+<text x="132" y="414" class="l" text-anchor="start">file bytes go straight to S3 (presigned URL, never through Lambda)</text>
+<rect x="250" y="500" width="220" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="250" y="510" width="4" height="44" rx="2" fill="#a78bfa"/>
+<text x="266" y="525" class="t">EventBridge bus</text>
+<text x="266" y="544" class="s">IncidentCreated (every incident)</text>
+<rect x="250" y="585" width="220" height="54" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="250" y="595" width="4" height="34" rx="2" fill="#a78bfa"/>
+<text x="266" y="610" class="t">SQS dead-letter queue</text>
+<text x="266" y="629" class="s">undeliverable P1 events</text>
+<rect x="530" y="480" width="240" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="530" y="490" width="4" height="44" rx="2" fill="#a78bfa"/>
+<text x="546" y="505" class="t">Step Functions</text>
+<text x="546" y="524" class="s">wait 5 min → acknowledged?</text>
+<rect x="830" y="480" width="210" height="64" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="830" y="490" width="4" height="44" rx="2" fill="#a78bfa"/>
+<text x="846" y="505" class="t">SNS</text>
+<text x="846" y="524" class="s">escalation email if no ACK</text>
+<rect x="530" y="570" width="240" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="530" y="580" width="4" height="50" rx="2" fill="#f472b6"/>
+<text x="546" y="595" class="t">ai-triage Lambda</text>
+<text x="546" y="614" class="s">suggests severity + summary</text>
+<text x="546" y="630" class="s">writes only aiSuggestion</text>
+<rect x="830" y="570" width="210" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="830" y="580" width="4" height="50" rx="2" fill="#f472b6"/>
+<text x="846" y="595" class="t">Amazon Bedrock</text>
+<text x="846" y="614" class="s">Claude Haiku 4.5</text>
+<text x="846" y="630" class="s">EU inference profile</text>
+<rect x="1080" y="560" width="160" height="90" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="1080" y="570" width="4" height="70" rx="2" fill="#94a3b8"/>
+<text x="1096" y="585" class="t">Human decides</text>
+<text x="1096" y="604" class="s">AI never changes</text>
+<text x="1096" y="620" class="s">severity; a manager</text>
+<text x="1096" y="636" class="s">applies it</text>
+<path d="M600,370 L600,482 L360,482 L360,498" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="608" y="400" class="l" text-anchor="start">publishes event</text>
+<path d="M470,522 L500,522 L500,512 L528,512" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="474" y="507" class="l" text-anchor="start">P1 only</text>
+<path d="M470,540 L500,540 L500,605 L528,605" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="506" y="590" class="l" text-anchor="start">all</text>
+<path d="M360,564 L360,583" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M770,512 L828,512" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M770,605 L828,605" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M1040,605 L1078,605" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<rect x="40" y="720" width="190" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="40" y="730" width="4" height="50" rx="2" fill="#e8e4dc"/>
+<text x="56" y="745" class="t">Pull request</text>
+<text x="56" y="764" class="s">GitHub</text>
+<rect x="270" y="720" width="220" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="270" y="730" width="4" height="50" rx="2" fill="#e8e4dc"/>
+<text x="286" y="745" class="t">Actions: plan</text>
+<text x="286" y="764" class="s">fmt, validate, plan</text>
+<text x="286" y="780" class="s">OIDC → read-only role</text>
+<rect x="530" y="720" width="220" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="530" y="730" width="4" height="50" rx="2" fill="#e8e4dc"/>
+<text x="546" y="745" class="t">Merge + approval</text>
+<text x="546" y="764" class="s">&quot;production&quot; environment</text>
+<text x="546" y="780" class="s">main branch only</text>
+<rect x="790" y="720" width="220" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="790" y="730" width="4" height="50" rx="2" fill="#e8e4dc"/>
+<text x="806" y="745" class="t">Actions: apply</text>
+<text x="806" y="764" class="s">OIDC → apply role</text>
+<text x="806" y="780" class="s">applies the saved plan</text>
+<rect x="1050" y="720" width="190" height="70" rx="10" fill="#141c2b" stroke="#2a3a55"/>
+<rect x="1050" y="730" width="4" height="50" rx="2" fill="#e8e4dc"/>
+<text x="1066" y="745" class="t">Terraform state</text>
+<text x="1066" y="764" class="s">S3 + native lock file</text>
+<path d="M230,755 L268,755" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M490,755 L528,755" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M750,755 L788,755" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<path d="M1010,755 L1048,755" fill="none" stroke="#6b7c96" stroke-width="1.6" marker-end="url(#ah)"/>
+<text x="40" y="830" class="s">~125 resources in Terraform · every change: branch → PR → plan → merge → human approval → apply · short-lived credentials only</text>
+</svg>
